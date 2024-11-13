@@ -172,7 +172,7 @@ const uploadFileToSupabase = async (file) => {
     }
 
     // Construct the public URL manually with download and file name headers
-    const supabaseUrl = 'https://gqgwpwknmueehztfkgsf.supabase.co';
+    const supabaseUrl = 'https://qnklgihlazkpiwsfdlpu.supabase.co';
     const publicUrl = `${supabaseUrl}/storage/v1/object/public/uploaddocument/documents/${fileNameWithTimestamp}`;
     const downloadUrl = `${publicUrl}?download=&fileName=${encodeURIComponent(file.originalname)}`;
 
