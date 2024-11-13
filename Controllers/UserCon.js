@@ -361,7 +361,7 @@ exports.getUserById = async (req, res) => {
       StoreID:  user.Store.StoreID || null, 
       StoreName:  user.Store.StoreName || null, 
       StoreCode: user.Store.StoreCode,
-      ZipCode: user.ZipCode,
+      ZipCode: user.Address?.ZipCode || null,
     };
 
     return res.status(200).json({
