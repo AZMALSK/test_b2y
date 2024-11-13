@@ -149,7 +149,7 @@ exports.GetAllFeedBacks = async (req, res) => {
                 {
                     model: OrderTabelModel, // Assuming you have a CustomerModel
                     as: 'OrdersTable', // Use the same alias you used in associations
-                    attributes: ['OrderNumber']
+                    attributes: ['OrderNumber','Type']
                 }
             ],
             // order: [
@@ -172,7 +172,8 @@ exports.GetAllFeedBacks = async (req, res) => {
             OrderID: feedback.OrderID,
             ItemName: feedback.ItemName,
             DeliveryDate: feedback.DeliveryDate,
-            OrderNumber: feedback.OrdersTable?.OrderNumber || null, 
+            OrderNumber: feedback.OrdersTable?.OrderNumber || null,
+            ProjectType: feedback.OrdersTable?.Type || null,
             ReceivedDocuments: feedback.ReceivedDocuments,
             ReceivedWarrantyCard: feedback.ReceivedWarrantyCard,
             InstallationSuccessful: feedback.InstallationSuccessful,
