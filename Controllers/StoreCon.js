@@ -1,4 +1,4 @@
-const { StoreModel,CityModel,StateModel,CountryModel } = require('../ConnectionDB/Connect');  
+const { StoreModel,CityModel,StateModel,CountryModel,UserManagementModel,MapStoreUser } = require('../ConnectionDB/Connect');  
 // const Sequelize = require('sequelize');
 const { Sequelize, DataTypes } = require('sequelize');
 const { Op } = require('sequelize'); 
