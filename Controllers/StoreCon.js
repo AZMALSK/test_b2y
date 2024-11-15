@@ -4,50 +4,35 @@ const { Sequelize, DataTypes } = require('sequelize');
 const { Op } = require('sequelize'); 
 // Get all Stores with Pagination
 exports.getAllStores = async (req, res) => {
-  const { pageNumber, pageSize } = req.query; // Getting pageNumber and pageSize from query
+  const { pageNumber, pageSize, UserID } = req.query;
   const searchText = Object.keys(req.query).find(key => key.toLowerCase() === 'searchtext');
   const searchValue = req.query[searchText]?.toLowerCase() || '';
 
   try {
+    // Fetch the user's role to determine if they are an admin
+    const user = await UserManagementModel.findOne({ where: { UserID } });
+    if (!user) {
+      return res.status(404).json({ StatusCode: 'ERROR', message: 'User not found' });
+    }
+
+    // Check if the user is an admin (RoleID = 1)
+    const isAdmin = user.RoleID === 1;
+
     // Define the search filter based on searchText
     const searchFilter = {
       [Sequelize.Op.or]: [
-        {
-          StoreName: {
-            [Sequelize.Op.iLike]: `%${searchValue}%`
-          }
-        },
-        {
-          Email: {
-            [Sequelize.Op.iLike]: `%${searchValue}%`
-          }
-        },
-        {
-          Phone: {
-            [Sequelize.Op.iLike]: `%${searchValue}%`
-          }
-        }
+        { StoreName: { [Sequelize.Op.iLike]: `%${searchValue}%` } },
+        { Email: { [Sequelize.Op.iLike]: `%${searchValue}%` } },
+        { Phone: { [Sequelize.Op.iLike]: `%${searchValue}%` } }
       ]
     };
 
     let options = {
       where: searchFilter,
       include: [
-        {
-          model: CityModel,
-          as: 'City',
-          attributes: ['CityName']
-        },
-        {
-          model: StateModel,
-          as: 'State',
-          attributes: ['StateName']
-        },
-        {
-          model: CountryModel,
-          as: 'Country',
-          attributes: ['CountryName']
-        }
+        { model: CityModel, as: 'City', attributes: ['CityName'] },
+        { model: StateModel, as: 'State', attributes: ['StateName'] },
+        { model: CountryModel, as: 'Country', attributes: ['CountryName'] }
       ],
       attributes: [
         'StoreID', 'StoreName', 'Email', 'Phone', 'AddressLine1',
@@ -59,7 +44,23 @@ exports.getAllStores = async (req, res) => {
       ]
     };
 
-    // Apply pagination only if pageNumber and pageSize are provided
+    // If the user is not an admin, filter stores based on MapStoreUser entries
+    if (!isAdmin) {
+      const assignedStores = await MapStoreUser.findAll({
+        where: { UserID },
+        attributes: ['StoreID']
+      });
+
+      const assignedStoreIds = assignedStores.map(store => store.StoreID);
+
+      // Only return stores that are assigned to the user
+      options.where = {
+        ...options.where,
+        StoreID: { [Sequelize.Op.in]: assignedStoreIds }
+      };
+    }
+
+    // Apply pagination if pageNumber and pageSize are provided
     if (pageNumber && pageSize) {
       const offset = (parseInt(pageNumber, 10) - 1) * parseInt(pageSize, 10);
       options = {
@@ -71,7 +72,7 @@ exports.getAllStores = async (req, res) => {
 
     const { count, rows } = await StoreModel.findAndCountAll(options);
 
-    // Formatting the result
+    // Format the response data
     const formattedStores = rows.map(store => ({
       StoreID: store.StoreID,
       StoreName: store.StoreName,
@@ -83,12 +84,12 @@ exports.getAllStores = async (req, res) => {
       StateName: store.State?.StateName || null,
       CountryName: store.Country?.CountryName || null,
       StoreCode: store.StoreCode,
-      ZipCode: store.ZipCode,
+      ZipCode: store.ZipCode
     }));
 
     return res.status(200).json({
       StatusCode: 'SUCCESS',
-      page: pageNumber ? parseInt(pageNumber, 10) : null, // Only return page info if pagination is applied
+      page: pageNumber ? parseInt(pageNumber, 10) : null,
       pageSize: pageSize ? parseInt(pageSize, 10) : null,
       totalItems: count,
       totalPages: pageNumber && pageSize ? Math.ceil(count / pageSize) : null,
