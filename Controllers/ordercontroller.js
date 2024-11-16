@@ -522,12 +522,182 @@ exports.GetSaleOrderReport = async (req, res) => {
 };
 
 
+// exports.getAllOrders = async (req, res) => {
+//   const { 
+//     pageNumber, 
+//     pageSize, 
+//     searchText = '', 
+//     StoreID, 
+//     StatusID, 
+//     SubStatusId,
+//     StartDate, 
+//     EndDate, 
+//     OntimeorDelay 
+//   } = req.query;
+
+//   try {
+//     // Initialize query object
+//     let queryConditions = {};
+
+//     // Apply search text filter (on OrderNumber, DesignerName, Customer FirstName, or LastName)
+//     if (searchText) {
+//       queryConditions = {
+//         ...queryConditions,
+//         [Op.or]: [
+//           { OrderNumber: { [Op.iLike]: `%${searchText}%` } },
+//           { DesginerName: { [Op.iLike]: `%${searchText}%` } },
+//           { '$Customer.FirstName$': { [Op.iLike]: `%${searchText}%` } }, 
+//           { '$Customer.LastName$': { [Op.iLike]: `%${searchText}%` } },  
+//         ]
+//       };
+//     }
+
+//     // Apply StoreID filter
+//     if (StoreID && StoreID > 0) {
+//       queryConditions = { 
+//         ...queryConditions, 
+//         StoreID: StoreID 
+//       };
+//     }
+
+//     // Apply StatusID filter
+//     if (StatusID && StatusID > 0) {
+//       queryConditions = {
+//         ...queryConditions,
+//         StatusID: StatusID
+//       };
+//     }
+
+//     // Apply SubStatusId filter
+//     if (SubStatusId && SubStatusId > 0) {
+//       queryConditions = {
+//         ...queryConditions,
+//         SubStatusId: SubStatusId
+//       };
+//     }
+
+//     if (StartDate && EndDate) {
+//       const startDate = moment(StartDate).startOf('day').toDate();
+//       const endDate = moment(EndDate).endOf('day').toDate();
+    
+//       queryConditions = {
+//         ...queryConditions,
+//         CreatedAt: { [Op.between]: [startDate, endDate] } // Apply the date range only to CreatedAt field
+//       };
+//     }
+    
+
+//     const totalCount = await OrderTabelModel.count({
+//       where: queryConditions,
+//       include: [{ model: CustomerModel, as: 'Customer' }] // Include customer for counting total results
+//     });
+
+//     // Initialize options for the query
+//     let options = {
+//       where: queryConditions,
+//       include: [
+//         {
+//           model: CustomerModel, as: 'Customer',
+//           attributes: ['CustomerID', 'FirstName', 'LastName', 'Email', 'PhoneNumber']
+//         }
+//       ],
+//       attributes: ['OrderID', 'OrderNumber', 'OrderStatus', 'StatusID', 'TotalQuantity', 'TotalAmount', 'DeliveryDate', 'Type', 'Comments', 'DesginerName', 'CreatedAt', 'OrderDate', 'StoreID', 'StatusDeliveryDate', 'SubStatusId','UserID' ], 
+//       order: [
+//         [Sequelize.literal('GREATEST("OrdersTable"."CreatedAt", "OrdersTable"."UpdatedAt")'), 'DESC'],
+//         ['DesginerName', 'ASC']
+//       ],
+//       distinct: true
+//     };
+
+//     // Apply pagination if pageNumber and pageSize are provided
+//     if (pageNumber && pageSize) {
+//       const offset = (parseInt(pageNumber, 10) - 1) * parseInt(pageSize, 10);
+//       options = {
+//         ...options,
+//         limit: parseInt(pageSize, 10),
+//         offset: offset
+//       };
+//     }
+
+//     const orders = await OrderTabelModel.findAndCountAll(options);
+    
+//     // Calculate payments and balance for each order
+//     const modifiedOrders = await Promise.all(orders.rows.map(async (order) => {
+//       // Fetch all payments related to this order
+//       const payments = await Payment.findAll({
+//         where: { OrderID: order.OrderID }
+//       });
+
+//       // Sum the advance amounts from all the payments
+//       const totalAdvanceAmount = payments.reduce((sum, payment) => sum + parseFloat(payment.Amount), 0);
+
+//       // Calculate the balance amount
+//       const totalAmount = parseFloat(order.TotalAmount);
+//       const balanceAmount = totalAmount - totalAdvanceAmount;
+
+//       let statusDeliveryDate = moment(order.StatusDeliveryDate);
+//       let today = moment().startOf('day'); // Get the current date (starting from midnight)
+
+//       // Check if the StatusDeliveryDate is before today (delay) or on/after today (on time)
+//       let isDelayed = statusDeliveryDate.isBefore(today) ? 2 : 1; // 2 = delayed, 1 = on time
+
+//       // Filter orders based on OntimeorDelay if provided
+//       if (OntimeorDelay && parseInt(OntimeorDelay) !== isDelayed) {
+//         return null; // Skip if doesn't match OntimeorDelay filter
+//       }
+
+//       return {
+//         OrderID: order.OrderID,
+//         OrderNumber: order.OrderNumber,
+//         OrderStatus: order.OrderStatus,
+//         StatusID: order.StatusID,
+//         TotalQuantity: order.TotalQuantity,
+//         TotalAmount: totalAmount.toFixed(2),
+//         AdvanceAmount: totalAdvanceAmount.toFixed(2),
+//         BalanceAmount: balanceAmount.toFixed(2),
+//         DeliveryDate: order.DeliveryDate,
+//         StatusDeliveryDate: order.StatusDeliveryDate,
+//         SubStatusId: order.SubStatusId,
+//         UserID:order.UserID,
+//         Type: order.Type,
+//         Comments: order.Comments,
+//         DesginerName: order.DesginerName,
+//         OrderDate: order.OrderDate,
+//         StoreID: order.StoreID,
+//         CustomerName: `${order.Customer.FirstName} ${order.Customer.LastName}`, 
+//         Email: order.Customer.Email, 
+//         Phone: order.Customer.PhoneNumber, 
+//         CustomerID: order.Customer.CustomerID,
+//         OntimeorDelay: isDelayed,
+//       };
+//     }));
+
+//     const filteredOrders = modifiedOrders.filter(order => order !== null); // Remove null entries (filtered by OntimeorDelay)
+//     const totalPages = pageNumber && pageSize ? Math.ceil(totalCount / pageSize) : null;
+
+//     // Send the response
+//     res.status(200).json({
+//       StatusCode: 'SUCCESS',
+//       message: 'Orders fetched successfully',
+//       totalRecords: filteredOrders.length,
+//       totalPages,
+//       totalItems: totalCount,
+//       currentPage: pageNumber ? parseInt(pageNumber, 10) : null,
+//       data: filteredOrders
+//     });
+
+//   } catch (error) {
+//     console.error('Error fetching all orders:', error);
+//     res.status(500).json({ error: 'Internal Server Error' });
+//   }
+// };
+
 exports.getAllOrders = async (req, res) => {
   const { 
     pageNumber, 
     pageSize, 
     searchText = '', 
-    StoreID, 
+    StoreIDs, // Array of Store IDs
     StatusID, 
     SubStatusId,
     StartDate, 
@@ -552,11 +722,12 @@ exports.getAllOrders = async (req, res) => {
       };
     }
 
-    // Apply StoreID filter
-    if (StoreID && StoreID > 0) {
+    // Apply StoreIDs filter (handle array)
+    if (StoreIDs && StoreIDs.length > 0) {
+      const storeIdsArray = Array.isArray(StoreIDs) ? StoreIDs : StoreIDs.split(','); // Ensure it's an array
       queryConditions = { 
         ...queryConditions, 
-        StoreID: StoreID 
+        StoreID: { [Op.in]: storeIdsArray } // Use [Op.in] to filter by array of StoreIDs
       };
     }
 
@@ -576,20 +747,20 @@ exports.getAllOrders = async (req, res) => {
       };
     }
 
+    // Apply date range filter
     if (StartDate && EndDate) {
       const startDate = moment(StartDate).startOf('day').toDate();
       const endDate = moment(EndDate).endOf('day').toDate();
-    
       queryConditions = {
         ...queryConditions,
-        CreatedAt: { [Op.between]: [startDate, endDate] } // Apply the date range only to CreatedAt field
+        CreatedAt: { [Op.between]: [startDate, endDate] }
       };
     }
-    
 
+    // Get total count for pagination
     const totalCount = await OrderTabelModel.count({
       where: queryConditions,
-      include: [{ model: CustomerModel, as: 'Customer' }] // Include customer for counting total results
+      include: [{ model: CustomerModel, as: 'Customer' }]
     });
 
     // Initialize options for the query
@@ -623,27 +794,20 @@ exports.getAllOrders = async (req, res) => {
     
     // Calculate payments and balance for each order
     const modifiedOrders = await Promise.all(orders.rows.map(async (order) => {
-      // Fetch all payments related to this order
       const payments = await Payment.findAll({
         where: { OrderID: order.OrderID }
       });
 
-      // Sum the advance amounts from all the payments
       const totalAdvanceAmount = payments.reduce((sum, payment) => sum + parseFloat(payment.Amount), 0);
-
-      // Calculate the balance amount
       const totalAmount = parseFloat(order.TotalAmount);
       const balanceAmount = totalAmount - totalAdvanceAmount;
 
-      let statusDeliveryDate = moment(order.StatusDeliveryDate);
-      let today = moment().startOf('day'); // Get the current date (starting from midnight)
+      const statusDeliveryDate = moment(order.StatusDeliveryDate);
+      const today = moment().startOf('day');
+      const isDelayed = statusDeliveryDate.isBefore(today) ? 2 : 1;
 
-      // Check if the StatusDeliveryDate is before today (delay) or on/after today (on time)
-      let isDelayed = statusDeliveryDate.isBefore(today) ? 2 : 1; // 2 = delayed, 1 = on time
-
-      // Filter orders based on OntimeorDelay if provided
       if (OntimeorDelay && parseInt(OntimeorDelay) !== isDelayed) {
-        return null; // Skip if doesn't match OntimeorDelay filter
+        return null;
       }
 
       return {
@@ -658,7 +822,7 @@ exports.getAllOrders = async (req, res) => {
         DeliveryDate: order.DeliveryDate,
         StatusDeliveryDate: order.StatusDeliveryDate,
         SubStatusId: order.SubStatusId,
-        UserID:order.UserID,
+        UserID: order.UserID,
         Type: order.Type,
         Comments: order.Comments,
         DesginerName: order.DesginerName,
@@ -672,10 +836,9 @@ exports.getAllOrders = async (req, res) => {
       };
     }));
 
-    const filteredOrders = modifiedOrders.filter(order => order !== null); // Remove null entries (filtered by OntimeorDelay)
+    const filteredOrders = modifiedOrders.filter(order => order !== null);
     const totalPages = pageNumber && pageSize ? Math.ceil(totalCount / pageSize) : null;
 
-    // Send the response
     res.status(200).json({
       StatusCode: 'SUCCESS',
       message: 'Orders fetched successfully',
@@ -691,7 +854,6 @@ exports.getAllOrders = async (req, res) => {
     res.status(500).json({ error: 'Internal Server Error' });
   }
 };
-
 
 
 

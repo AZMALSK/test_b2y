@@ -234,65 +234,132 @@ exports.getRoleById = async (req, res) => {
 
 //Delete roles by Id
 
+// exports.getAllRoles = async (req, res) => {
+//     const { page = 1, limit = 10, StoreID } = req.query;
+//     const searchText = req.query.SearchText || ''; // Using SearchText from the query string
+//     const pageNumber = Math.max(parseInt(page, 10), 1);
+//     const pageSize = Math.max(parseInt(limit, 10), 1);
+
+//     try {
+//         // Dynamically build the search filter
+//         const searchFilter = {
+//             [Sequelize.Op.and]: []
+//         };
+
+//         // Add StoreID to the search filter if provided
+//         if (StoreID) {
+//             searchFilter[Sequelize.Op.and].push({
+//                 StoreID: StoreID // Assumes StoreID is an exact match
+//             });
+//         }
+
+//         // Add SearchText to the search filter if provided
+//         if (searchText) {
+//             searchFilter[Sequelize.Op.and].push({
+//                 [Sequelize.Op.or]: [
+//                     { RoleName: { [Sequelize.Op.iLike]: `%${searchText}%` } },
+//                     Sequelize.literal(`"Status"::text ILIKE '%${searchText}%'`),
+//                     Sequelize.literal(`"Store"."StoreName" ILIKE '%${searchText}%'`)
+//                 ]
+//             });
+//         }
+
+//         // Count the total number of records that match the search filter
+//         const totalItems = await RoleModel.count({
+//             where: searchFilter,
+//             include: [
+//                 {
+//                     model: StoreModel,
+//                     as: 'Store',
+//                     attributes: ['StoreID', 'StoreName', 'StoreCode']
+//                 }
+//             ]
+//         });
+
+//         // Fetch the records with pagination after applying the search filter
+//         const roles = await RoleModel.findAll({
+//             where: searchFilter,
+//             include: [
+//                 {
+//                     model: StoreModel,
+//                     as: 'Store',
+//                     attributes: ['StoreID', 'StoreName', 'StoreCode']
+//                 }
+//             ],
+//             limit: pageSize,
+//             attributes: ['RoleID', 'RoleName', 'Status'],
+//             order: [
+//                 [Sequelize.literal('GREATEST("Role"."CreatedAt", "Role"."UpdatedAt")'), 'DESC'],
+//                 ['RoleName', 'ASC']
+//             ],
+//             offset: (pageNumber - 1) * pageSize
+//         });
+
+//         const formattedRoles = roles.map(role => ({
+//             RoleID: role.RoleID,
+//             RoleName: role.RoleName,
+//             Status: role.Status,
+//             StoreID: role.Store?.StoreID || null,
+//             StoreName: role.Store?.StoreName || null,
+//             StoreCode: role.Store?.StoreCode || null
+//         }));
+
+//         return res.status(200).json({
+//             StatusCode: 'SUCCESS',
+//             page: pageNumber,
+//             pageSize,
+//             totalItems,
+//             totalPages: Math.ceil(totalItems / pageSize),
+//             roles: formattedRoles // Returning formatted roles with store details
+//         });
+//     } catch (error) {
+//         console.error('Error fetching roles with pagination and search:', error);
+//         return res.status(500).json({
+//             StatusCode: 'ERROR',
+//             message: 'Internal Server Error'
+//         });
+//     }
+// };
+
 exports.getAllRoles = async (req, res) => {
-    const { page = 1, limit = 10, StoreID } = req.query;
-    const searchText = req.query.SearchText || ''; // Using SearchText from the query string
-    const pageNumber = Math.max(parseInt(page, 10), 1);
-    const pageSize = Math.max(parseInt(limit, 10), 1);
+    const { page = 1, limit = 10, StoreIDs, SearchText = '' } = req.query;
 
     try {
-        // Dynamically build the search filter
-        const searchFilter = {
+        const pageNumber = Math.max(parseInt(page, 10), 1);
+        const pageSize = Math.max(parseInt(limit, 10), 1);
+
+        // Build dynamic query
+        const queryConditions = {
             [Sequelize.Op.and]: []
         };
 
-        // Add StoreID to the search filter if provided
-        if (StoreID) {
-            searchFilter[Sequelize.Op.and].push({
-                StoreID: StoreID // Assumes StoreID is an exact match
-            });
-        }
-
-        // Add SearchText to the search filter if provided
-        if (searchText) {
-            searchFilter[Sequelize.Op.and].push({
+        if (SearchText) {
+            queryConditions[Sequelize.Op.and].push({
                 [Sequelize.Op.or]: [
-                    { RoleName: { [Sequelize.Op.iLike]: `%${searchText}%` } },
-                    Sequelize.literal(`"Status"::text ILIKE '%${searchText}%'`),
-                    Sequelize.literal(`"Store"."StoreName" ILIKE '%${searchText}%'`)
+                    { RoleName: { [Sequelize.Op.iLike]: `%${SearchText}%` } },
+                    Sequelize.literal(`"Status"::text ILIKE '%${SearchText}%'`),
+                    Sequelize.literal(`"Store"."StoreName" ILIKE '%${SearchText}%'`)
                 ]
             });
         }
 
-        // Count the total number of records that match the search filter
+        if (StoreIDs) {
+            const storeIdsArray = Array.isArray(StoreIDs) ? StoreIDs : StoreIDs.split(',');
+            queryConditions[Sequelize.Op.and].push({ StoreID: { [Sequelize.Op.in]: storeIdsArray } });
+        }
+
         const totalItems = await RoleModel.count({
-            where: searchFilter,
-            include: [
-                {
-                    model: StoreModel,
-                    as: 'Store',
-                    attributes: ['StoreID', 'StoreName', 'StoreCode']
-                }
-            ]
+            where: queryConditions,
+            include: [{ model: StoreModel, as: 'Store', attributes: ['StoreID', 'StoreName', 'StoreCode'] }]
         });
 
-        // Fetch the records with pagination after applying the search filter
         const roles = await RoleModel.findAll({
-            where: searchFilter,
-            include: [
-                {
-                    model: StoreModel,
-                    as: 'Store',
-                    attributes: ['StoreID', 'StoreName', 'StoreCode']
-                }
-            ],
+            where: queryConditions,
+            include: [{ model: StoreModel, as: 'Store', attributes: ['StoreID', 'StoreName', 'StoreCode'] }],
             limit: pageSize,
-            attributes: ['RoleID', 'RoleName', 'Status'],
-            order: [
-                [Sequelize.literal('GREATEST("Role"."CreatedAt", "Role"."UpdatedAt")'), 'DESC'],
-                ['RoleName', 'ASC']
-            ],
-            offset: (pageNumber - 1) * pageSize
+            offset: (pageNumber - 1) * pageSize,
+            order: [[Sequelize.literal('GREATEST("Role"."CreatedAt", "Role"."UpdatedAt")'), 'DESC'], ['RoleName', 'ASC']],
+            attributes: ['RoleID', 'RoleName', 'Status']
         });
 
         const formattedRoles = roles.map(role => ({
@@ -310,14 +377,11 @@ exports.getAllRoles = async (req, res) => {
             pageSize,
             totalItems,
             totalPages: Math.ceil(totalItems / pageSize),
-            roles: formattedRoles // Returning formatted roles with store details
+            roles: formattedRoles
         });
     } catch (error) {
-        console.error('Error fetching roles with pagination and search:', error);
-        return res.status(500).json({
-            StatusCode: 'ERROR',
-            message: 'Internal Server Error'
-        });
+        console.error('Error fetching roles:', error);
+        return res.status(500).json({ StatusCode: 'ERROR', message: 'Internal Server Error' });
     }
 };
 
