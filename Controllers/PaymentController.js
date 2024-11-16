@@ -33,71 +33,51 @@ exports.getPaymentById = async (req, res) => {
     
 
 exports.getAllPayments = async (req, res) => {
-    const { page = 1, limit = 10, StoreID, StartDate, EndDate } = req.query;
-    const searchText = req.query.searchText || ''; // Extract the search text from the query
+    const { page = 1, limit = 10, StoreIDs, StartDate, EndDate, searchText = '' } = req.query;
 
     try {
-        const offset = (page - 1) * limit;
+        const pageNumber = Math.max(parseInt(page, 10), 1);
+        const pageSize = Math.max(parseInt(limit, 10), 1);
 
-        // Build the filtering conditions
-        let whereConditions = {};
+        const offset = (pageNumber - 1) * pageSize;
 
-        // Apply search text filter on multiple fields
+        // Build query conditions
+        const queryConditions = {};
+
         if (searchText) {
-            whereConditions = {
-                ...whereConditions,
-                [Op.or]: [
-                    { PaymentMethod: { [Op.iLike]: `%${searchText}%` } },
-                    { '$Customer.FirstName$': { [Op.iLike]: `%${searchText}%` } },
-                    { '$Customer.LastName$': { [Op.iLike]: `%${searchText}%` } },
-                    { '$OrdersTable.OrderNumber$': { [Op.iLike]: `%${searchText}%` } }
-                ]
-            };
+            queryConditions[Sequelize.Op.or] = [
+                { PaymentMethod: { [Sequelize.Op.iLike]: `%${searchText}%` } },
+                { '$Customer.FirstName$': { [Sequelize.Op.iLike]: `%${searchText}%` } },
+                { '$Customer.LastName$': { [Sequelize.Op.iLike]: `%${searchText}%` } },
+                { '$OrdersTable.OrderNumber$': { [Sequelize.Op.iLike]: `%${searchText}%` } }
+            ];
         }
 
-        // Apply StoreID filter if provided
-        if (StoreID) {
-            whereConditions.StoreID = StoreID;
+        if (StoreIDs) {
+            const storeIdsArray = Array.isArray(StoreIDs) ? StoreIDs : StoreIDs.split(',');
+            queryConditions.StoreID = { [Sequelize.Op.in]: storeIdsArray };
         }
 
-        // Apply StartDate and EndDate filter if provided
         if (StartDate && EndDate) {
             const startDate = new Date(StartDate);
             const endDate = new Date(EndDate);
-            endDate.setUTCHours(23, 59, 59, 999); // Include the full end day
+            endDate.setUTCHours(23, 59, 59, 999);
 
-            whereConditions.CreatedAt = {
-                [Op.between]: [startDate, endDate],
-            };
+            queryConditions.CreatedAt = { [Sequelize.Op.between]: [startDate, endDate] };
         }
 
-        // Perform the query
         const payments = await Payment.findAndCountAll({
-            where: whereConditions,
+            where: queryConditions,
             offset,
-            limit: parseInt(limit),
+            limit: pageSize,
             include: [
-                {
-                    model: OrderTabelModel, as: 'OrdersTable',
-                    attributes: ['OrderNumber']
-                },
-                {
-                    model: CustomerModel,
-                    attributes: ['FirstName', 'LastName']
-                },
-                {
-                    model: StoreModel, 
-                    as: 'StoreTabel',
-                    attributes: ['StoreID', 'StoreName']
-                },
+                { model: OrderTabelModel, as: 'OrdersTable', attributes: ['OrderNumber'] },
+                { model: CustomerModel, attributes: ['FirstName', 'LastName'] },
+                { model: StoreModel, as: 'StoreTabel', attributes: ['StoreID', 'StoreName'] }
             ],
-            order: [
-                [Sequelize.literal('GREATEST("Payment"."CreatedAt", "Payment"."UpdatedAt")'), 'DESC'],
-                ['PaymentMethod', 'ASC']
-            ],
+            order: [[Sequelize.literal('GREATEST("Payment"."CreatedAt", "Payment"."UpdatedAt")'), 'DESC'], ['PaymentMethod', 'ASC']]
         });
 
-        // Transform the response
         const transformedData = payments.rows.map(payment => ({
             PaymentID: payment.PaymentID,
             OrderID: payment.OrderID,
@@ -107,9 +87,9 @@ exports.getAllPayments = async (req, res) => {
             PaymentComments: payment.PaymentComments,
             PaymentMethod: payment.PaymentMethod,
             MaskedCardNumber: payment.MaskedCardNumber,
-            OrderNumber: payment.OrdersTable?.OrderNumber || null, 
-            StoreID: payment.StoreTabel?.StoreID || null,  
-            StoreName: payment.StoreTabel?.StoreName || 'N/A',  
+            OrderNumber: payment.OrdersTable?.OrderNumber || null,
+            StoreID: payment.StoreTabel?.StoreID || null,
+            StoreName: payment.StoreTabel?.StoreName || 'N/A',
             CustomerName: `${payment.Customer.FirstName} ${payment.Customer.LastName}`
         }));
 
@@ -117,16 +97,14 @@ exports.getAllPayments = async (req, res) => {
             StatusCode: 'SUCCESS',
             data: transformedData,
             totalRecords: payments.count,
-            totalPages: Math.ceil(payments.count / limit),
-            currentPage: parseInt(page),
+            totalPages: Math.ceil(payments.count / pageSize),
+            currentPage: pageNumber
         });
     } catch (error) {
         console.error('Error fetching payments:', error);
-        res.status(500).json({ error: 'An error occurred while fetching payments.' });
+        res.status(500).json({ error: 'Internal Server Error' });
     }
 };
-
-
 
 exports.getPaymentByPaymentId = async (req, res) => {
     const { PaymentID } = req.params;
