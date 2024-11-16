@@ -3,7 +3,7 @@ const { Sequelize, DataTypes } = require('sequelize');
 const moment = require('moment'); 
 
 exports.getOverAllDataForDashboard = async (req, res) => {
-    const { StoreId, StartDate, EndDate } = req.body;
+    const { StoreIDs, StartDate, EndDate } = req.body;
     
     try {
         let orders = { where: {} };
@@ -11,12 +11,13 @@ exports.getOverAllDataForDashboard = async (req, res) => {
         let payment = { where: {} };
         let customers = { where: {} };
 
-        // Apply StoreId filter if provided
-        if (StoreId) {
-            orders.where.StoreID = StoreId;
-            productions.where.StoreID = StoreId;
-            payment.where.StoreID = StoreId;
-            customers.where.StoreID = StoreId;
+        // Handle multiple StoreIDs
+        if (StoreIDs) {
+            const storeIdsArray = StoreIDs.split(',');
+            orders.where.StoreID = { [Sequelize.Op.in]: storeIdsArray };
+            productions.where.StoreID = { [Sequelize.Op.in]: storeIdsArray };
+            payment.where.StoreID = { [Sequelize.Op.in]: storeIdsArray };
+            customers.where.StoreID = { [Sequelize.Op.in]: storeIdsArray };
         }
 
         // Apply date range filter if provided
@@ -69,16 +70,17 @@ exports.getOverAllDataForDashboard = async (req, res) => {
 
 
 exports.getSalesAndPaymentReportByMonth = async (req, res) => {
-    const { StoreId } = req.body;
+    const { StoreIDs } = req.body;
 
     try {
         let order = { where: {}, attributes: [[Sequelize.fn('DATE_TRUNC', 'month', Sequelize.col('OrderDate')), 'Month'], [Sequelize.fn('COUNT', Sequelize.col('OrderID')), 'OrderCount']] };
         let payment = { where: {}, attributes: [[Sequelize.fn('DATE_TRUNC', 'month', Sequelize.col('PaymentDate')), 'Month'], [Sequelize.fn('SUM', Sequelize.col('Amount')), 'TotalPayments']] };
 
-        // Apply StoreId filter if provided
-        if (StoreId) {
-            order.where.StoreID = StoreId;
-            payment.where.StoreID = StoreId;
+        // Handle multiple StoreIDs
+        if (StoreIDs) {
+            const storeIdsArray = StoreIDs.split(',');
+            order.where.StoreID = { [Sequelize.Op.in]: storeIdsArray };
+            payment.where.StoreID = { [Sequelize.Op.in]: storeIdsArray };
         }
 
         // Fetch orders and payments grouped by month

@@ -99,14 +99,14 @@ exports.CreateOrderFeedBack = async (req, res) => {
 
 // READ All Feedbacks (GET)
 exports.GetAllFeedBacks = async (req, res) => {
-    const { pageNumber = 1, pageSize = 10, StoreID, StartDate, EndDate } = req.query;
+    const { pageNumber = 1, pageSize = 10, StoreIDs, StartDate, EndDate } = req.query;
     const searchText = Object.keys(req.query).find(key => key.toLowerCase() === 'searchtext');
     const searchValue = req.query[searchText]?.toLowerCase() || '';
 
     try {
         const offset = (pageNumber - 1) * pageSize;
 
-        // Build the filtering conditions
+        // Build query conditions
         let whereConditions = {
             [Sequelize.Op.or]: [
                 {
@@ -127,12 +127,12 @@ exports.GetAllFeedBacks = async (req, res) => {
             ]
         };
 
-        // Apply StoreID filtering if provided
-        if (StoreID) {
-            whereConditions.StoreID = StoreID;
+        // Handle multiple StoreIDs
+        if (StoreIDs) {
+            whereConditions.StoreID = { [Sequelize.Op.in]: StoreIDs.split(',') };
         }
 
-        // Apply date filtering if both StartDate and EndDate are provided
+        // Apply date filtering if provided
         if (StartDate && EndDate) {
             const startDate = new Date(StartDate);
             const endDate = new Date(EndDate);
@@ -147,25 +147,20 @@ exports.GetAllFeedBacks = async (req, res) => {
             where: whereConditions,
             include: [
                 {
-                    model: OrderTabelModel, // Assuming you have a CustomerModel
-                    as: 'OrdersTable', // Use the same alias you used in associations
-                    attributes: ['OrderNumber','Type']
+                    model: OrderTabelModel,
+                    as: 'OrdersTable',
+                    attributes: ['OrderNumber']
                 }
             ],
-            // order: [
-            //     ['CreatedAt', 'DESC'] 
-            // ],
-
             order: [
                 [Sequelize.literal('GREATEST("Feedback"."CreatedAt", "Feedback"."UpdatedAt")'), 'DESC'],
-              ],
+            ],
             limit: parseInt(pageSize),
             offset: offset
         };
 
         const { count, rows } = await FeedbackModel.findAndCountAll(options);
 
-        // Formatting the result
         const formattedFeedbacks = rows.map(feedback => ({
             FeedBackID: feedback.FeedBackID,
             CustomerName: feedback.CustomerName,
@@ -173,16 +168,13 @@ exports.GetAllFeedBacks = async (req, res) => {
             ItemName: feedback.ItemName,
             DeliveryDate: feedback.DeliveryDate,
             OrderNumber: feedback.OrdersTable?.OrderNumber || null,
-            ProjectType: feedback.OrdersTable?.Type || null,
             ReceivedDocuments: feedback.ReceivedDocuments,
             ReceivedWarrantyCard: feedback.ReceivedWarrantyCard,
             InstallationSuccessful: feedback.InstallationSuccessful,
             OverallRating: feedback.OverallRating,
             Remarks: feedback.Remarks,
             StoreID: feedback.StoreID,
-
             CreatedAt: feedback.CreatedAt
-          
         }));
 
         return res.status(200).json({
@@ -198,7 +190,6 @@ exports.GetAllFeedBacks = async (req, res) => {
         return res.status(500).json({ StatusCode: 'ERROR', message: 'Error fetching feedbacks' });
     }
 };
-
 
 // READ Feedback by OrderId (GET)
 exports.GetFeedBackbyOrderID = async (req, res) => {

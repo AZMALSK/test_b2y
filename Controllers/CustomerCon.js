@@ -293,15 +293,14 @@ exports.createOrUpdateCustomer = async (req, res) => {
 exports.getAllCustomers = async (req, res) => {
     const page = parseInt(req.query.page, 10) || 1;
     const limit = parseInt(req.query.limit, 10) || 10;
-    const StoreID = req.query.StoreID;
-    const StartDate = req.query.StartDate;
-    const EndDate = req.query.EndDate;
+    const { StoreIDs, StartDate, EndDate } = req.query;
+    const searchText = Object.keys(req.query).find(key => key.toLowerCase() === 'searchtext');
+    const searchValue = req.query[searchText]?.toLowerCase() || '';
 
     try {
         const offset = (page - 1) * limit;
-        const searchText = Object.keys(req.query).find(key => key.toLowerCase() === 'searchtext');
-        const searchValue = req.query[searchText]?.toLowerCase() || '';
 
+        // Build query conditions
         const whereCondition = {
             [Sequelize.Op.and]: [
                 searchValue ? {
@@ -312,7 +311,8 @@ exports.getAllCustomers = async (req, res) => {
                         { PhoneNumber: { [Sequelize.Op.iLike]: `%${searchValue}%` } }
                     ]
                 } : {},
-                StoreID ? { StoreID } : {},
+                // Handle multiple StoreIDs
+                StoreIDs ? { StoreID: { [Sequelize.Op.in]: StoreIDs.split(',') } } : {},
                 StartDate && EndDate ? {
                     CreatedAt: {
                         [Sequelize.Op.between]: [
@@ -324,10 +324,8 @@ exports.getAllCustomers = async (req, res) => {
             ]
         };
 
-        // Get total count of records that match the search
         const totalCount = await CustomerModel.count({ where: whereCondition });
 
-        // Fetch paginated records
         const customers = await CustomerModel.findAll({
             include: [
                 { 
@@ -351,10 +349,9 @@ exports.getAllCustomers = async (req, res) => {
             ]
         });
 
-        // Format the customer and address data
         const formattedCustomers = customers.map(customer => {
             const primaryAddress = customer.Address && customer.Address[0]; // Assuming you want the first address
-            
+
             return {
                 CustomerFirstName: customer.FirstName,
                 CustomerLastName: customer.LastName,
@@ -379,10 +376,8 @@ exports.getAllCustomers = async (req, res) => {
             };
         });
 
-        // Calculate total pages based on the filtered records
         const totalPages = Math.ceil(totalCount / limit);
 
-        // Return paginated result with filtered customers
         res.status(200).json({
             StatusCode: 'SUCCESS',
             currentPage: page,
@@ -395,7 +390,6 @@ exports.getAllCustomers = async (req, res) => {
         res.status(500).json({ error: 'Internal Server Error' });
     }
 };
-
 
 // getCustomerById function
 exports.getCustomerById = async (req, res) => {
