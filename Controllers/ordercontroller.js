@@ -994,7 +994,7 @@ exports.updateSubOrderStatus = async (req, res) => {
     });
 
     // Check if SubStatusId is 4 to trigger the payment email notification
-    if (SubStatusId === 4) {
+    if (SubStatusId === 3) {
       await triggerPaymentEmail(OrderID);
     }
 
