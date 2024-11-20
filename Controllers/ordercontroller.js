@@ -973,7 +973,9 @@ exports.getOrderById = async (req, res) => {
 
 // Function to update sub-order status
 exports.updateSubOrderStatus = async (req, res) => {
-  const { OrderID, SubStatusId } = req.body;
+  let { OrderID, SubStatusId } = req.body;
+
+  SubStatusId = parseInt(SubStatusId,10);
 
   if (!OrderID || !SubStatusId) {
     return res.status(400).json({ error: 'OrderID and SubStatusId are required.' });
@@ -993,7 +995,7 @@ exports.updateSubOrderStatus = async (req, res) => {
       SubStatusUpdatedDate: new Date(), 
     });
 
-    // Check if SubStatusId is 4 to trigger the payment email notification
+    // Check if SubStatusId is 3 to trigger the payment email notification
     if (SubStatusId === 3) {
       await triggerPaymentEmail(OrderID);
     }
