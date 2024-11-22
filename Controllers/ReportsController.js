@@ -17,7 +17,7 @@ exports.getPaymentReport = async (req, res) => {
             const startDate = new Date(StartDate);
             const endDate = new Date(EndDate);
             endDate.setUTCHours(23, 59, 59, 999);
-
+ 
              whereClause.PaymentDate = {
                 [Op.between]: [startDate, endDate],
             };
@@ -45,7 +45,7 @@ exports.getPaymentReport = async (req, res) => {
                 },
                 { model: StoreModel, as: 'StoreTabel', attributes: ['StoreCode', 'StoreName', 'StoreID'] }
             ],
-            attributes: ['PaymentID','OrderID','Amount', 'PaymentDate','CreatedAt'],
+            attributes: ['PaymentID','OrderID','Amount', 'PaymentDate','CreatedAt','PaymentMethod'],
             order: [
                 [Sequelize.literal('GREATEST("Payment"."CreatedAt", "Payment"."UpdatedAt")'), 'DESC'],
                 ['PaymentMethod', 'ASC']
@@ -64,7 +64,7 @@ exports.getPaymentReport = async (req, res) => {
             Amount: payment.Amount || 0,
             PaymentType: payment.PaymentMethod || '',
             PaymentDate: payment.PaymentDate ? payment.PaymentDate.toISOString().split('T')[0] : '',
-            CreatedAt: payment.CreatedAt 
+            CreatedAt: payment.CreatedAt
         }));
         // Create a new workbook and worksheet
         const workbook = new ExcelJS.Workbook();
@@ -134,7 +134,6 @@ exports.getPaymentReport = async (req, res) => {
         });
     }
 };
-
 
 exports.getOrderReport = async (req, res) => {
     const { StartDate, EndDate, StoreID, StatusID } = req.body;
