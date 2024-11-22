@@ -345,6 +345,7 @@ exports.getUserById = async (req, res) => {
       EmployeeID: user.EmployeeID,
       FirstName: user.FirstName,
       LastName: user.LastName,
+      Password:user.Password,
       Email: user.Email,
       PhoneNumber: user.PhoneNumber,
       Gender: user.Gender,

@@ -18,12 +18,12 @@ const sequelize = new Sequelize(
       idle: 10000      // Maximum time, in ms, that a connection can be idle
     },
   logging: false, 
-  dialectOptions: {
-    ssl: {
-        require: true,
-        rejectUnauthorized: false 
-    }
- }
+//   dialectOptions: {
+//     ssl: {
+//         require: true,
+//         rejectUnauthorized: false 
+//     }
+//  }
 
 
 });

@@ -6,6 +6,10 @@ module.exports=(sequelize)=>{
             autoIncrement:true,
             primaryKey:true
         },
+        CustomerNumber:{
+            type:DataTypes.STRING(50),
+            allowNull:true
+        },
         TenantID:{
             type:DataTypes.INTEGER,
             allowNull:false

@@ -392,51 +392,6 @@ async function triggerStatusEmail(OrderID) {
     }
 }
 
-// // Function to handle the email notification for StatusID 11
-// async function triggerPaymentEmail(OrderID) {
-//     try {
-//         const orderHistory = await OrderHistory.findAll({
-//             where: { OrderID, StatusID: 7 }
-//         });
-//         if (!orderHistory) {
-//             throw new Error('No matching order with StatusID 7 found.');
-//         }
-
-//         const order = await OrderTabelModel.findOne({ where: { OrderID } });
-//         const customer = await CustomerModel.findOne({ where: { CustomerID: order.CustomerID } });
-
-//         const payments = await Payment.findAll({ where: { OrderID } });
-//         const totalAdvanceAmount = payments.reduce((sum, payment) => sum + parseFloat(payment.AdvanceAmount), 0);
-//         const totalAmount = parseFloat(order.TotalAmount);
-//         const balanceAmount = totalAmount - totalAdvanceAmount;
-
-//         // Fetch the store information using StoreID from the order
-//         const store = await StoreModel.findOne({
-//             where: { StoreID: order.StoreID },
-//             attributes: ['StoreID', 'StoreName']
-//         });
-
-//         if (!store) {
-//             throw new Error('Store not found.');
-//         }
-
-//         const emailData = {
-//             customerFirstName: customer.FirstName,
-//             customerEmail: customer.Email,
-//             OrderNumber: order.OrderNumber,
-//             OrderDate: order.OrderDate,
-//             Type:order.Type,
-//             TotalAmount: totalAmount.toFixed(2),
-//             AdvanceAmount: totalAdvanceAmount.toFixed(2),
-//             BalanceAmount: balanceAmount.toFixed(2),
-//             StoreName: store.StoreName,
-//         };
-        
-//         await sendTemplateEmail('PaymentReceived', emailData);
-//     } catch (error) {
-//         console.error('Error triggering payment email:', error);
-//     }
-// }
 
 async function triggerFeedbackEmail(OrderID) {
     try {

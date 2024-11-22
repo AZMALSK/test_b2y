@@ -3,102 +3,9 @@ const { sequelize, CustomerModel, AddressModel, Orders,StoreModel,CityModel,Stat
  const { sendTemplateEmail } = require('../middleware/SendEmail'); 
 const Address = require('../Models/Address');
 
- // Create a new Customer
-// exports.createOrUpdateCustomer = async (req, res) => {
-//     const {
-//         CustomerID,
-//         TenantID, FirstName, LastName, Email, Password, PhoneNumber, Gender,
-//         CreatedBy, UpdatedBy
-//     } = req.body;
  
-//     try {
-//         // Ensure TenantID is provided
-//         if (!TenantID) {
-//             return res.status(400).json({ error: 'TenantID is required' });
-//         }
- 
-//         if (CustomerID) {
-//             // Update existing customer
-//             const existingCustomer = await CustomerModel.findByPk(CustomerID);
- 
-//             if (!existingCustomer) {
-//                 return res.status(404).json({ error: 'Customer not found' });
-//             }
- 
-//             // Update customer details
-//             await existingCustomer.update({
-//                 TenantID,
-//                 FirstName,
-//                 LastName,
-//                 Email,
-//                 Password,
-//                 PhoneNumber,
-//                 Gender,
-//                 UpdatedBy
-//             });
- 
-//             return res.status(200).json({
-//                 StatusCode: 'SUCCESS',
-//                 message: 'Customer updated successfully',
-//                 CustomerID: existingCustomer.CustomerID
-//             });
-//         } else {
-//             // Creating a new customer
-//             // Check if email already exists
-//             const emailExists = await CustomerModel.findOne({ where: { Email } });
-//             if (emailExists) {
-//                 return res.status(400).json({ error: 'Email already exists' });
-//             }
- 
-//             // Start a transaction (if you need it)
-//             const transaction = await sequelize.transaction();
- 
-//             try {
-//                 // Create a new customer
-//                 const newCustomer = await CustomerModel.create({
-//                     TenantID,
-//                     FirstName,
-//                     LastName,
-//                     Email,
-//                     Password,
-//                     PhoneNumber,
-//                     Gender,
-//                     CreatedBy,
-//                     UpdatedBy
-//                 }, { transaction });
- 
-//                 // Prepare customer details for the email
-//                 const customerDetails = {
-//                     customerFirstName: FirstName, // Use FirstName from req.body
-//                     customerLastName: LastName,  // Use LastName from req.body
-//                     customerEmail: Email  
-//                 };
- 
-//                 // Send the email notification
-//                 await sendTemplateEmail('CustomerCreated', customerDetails);
- 
-//                 // Commit the transaction if all succeeds
-//                 await transaction.commit();
- 
-//                 return res.status(201).json({
-//                     StatusCode: 'SUCCESS',
-//                     message: 'Customer created successfully',
-//                     CustomerID: newCustomer.CustomerID
-//                 });
-//             } catch (emailError) {
-//                 // Rollback transaction if something goes wrong
-//                 await transaction.rollback();
-//                 console.error('Error sending email:', emailError);
-//                 return res.status(500).json({ error: 'Error sending email' });
-//             }
-//         }
-//     } catch (error) {
-//         console.error('Error creating or updating customer:', error);
-//         res.status(500).json({ error: 'Internal Server Error' });
-//     }
-// };
-
 exports.createOrUpdateCustomer = async (req, res) => {
+
     const {
         CustomerID,
         TenantID,
@@ -124,7 +31,6 @@ exports.createOrUpdateCustomer = async (req, res) => {
         }
  
         if (CustomerID) {
-           
             const existingCustomer = await CustomerModel.findByPk(CustomerID);
  
             if (!existingCustomer) {
@@ -140,7 +46,7 @@ exports.createOrUpdateCustomer = async (req, res) => {
                 PhoneNumber,
                 Alternative_PhoneNumber,
                 ReferedBy,
-                SubReference:SubReference || 'self',
+                SubReference: SubReference || 'self',
                 Comments,
                 Gender,
                 StoreID,
@@ -176,14 +82,21 @@ exports.createOrUpdateCustomer = async (req, res) => {
                 return res.status(500).json({ error: 'Customer updated but error sending email' });
             }
         } else {
-           
             const emailExists = await CustomerModel.findOne({ where: { Email } });
             if (emailExists) {
                 return res.status(400).json({ error: 'Email already exists' });
             }
+            
             const transaction = await sequelize.transaction();
  
             try {
+                // Fetch the StoreCode from the Store table using StoreID
+                const store = await StoreModel.findByPk(StoreID);
+                if (!store) {
+                    return res.status(404).json({ error: 'Store not found' });
+                }
+                const storeCode = store.StoreCode; // assuming StoreCode exists in Store model
+
                 // Create a new customer
                 const newCustomer = await CustomerModel.create({
                     TenantID,
@@ -194,7 +107,7 @@ exports.createOrUpdateCustomer = async (req, res) => {
                     PhoneNumber,
                     Alternative_PhoneNumber,
                     ReferedBy,
-                    SubReference:SubReference || 'self',
+                    SubReference: SubReference || 'self',
                     Comments,
                     Gender,
                     CreatedBy,
@@ -203,7 +116,13 @@ exports.createOrUpdateCustomer = async (req, res) => {
                     UpdatedAt: new Date(),
                     UpdatedBy
                 }, { transaction });
- 
+
+                // Generate the CustomerNumber using StoreCode and CustomerID
+                const customerNumber = `IS/${storeCode}/${newCustomer.CustomerID}`;
+
+                // Update the new customer with the generated CustomerNumber
+                await newCustomer.update({ CustomerNumber: customerNumber }, { transaction });
+
                 // Prepare customer details for the email
                 const customerDetails = {
                     customerFirstName: FirstName,
@@ -232,63 +151,6 @@ exports.createOrUpdateCustomer = async (req, res) => {
         res.status(500).json({ error: 'Internal Server Error' });
     }
 };
- 
-
-//  getAllCustomers function
-// exports.getAllCustomers = async (req, res) => {
-//     const { page = 1, limit = 10, SearchText = '' } = req.query;
-
-//     try {
-//         const offset = (page - 1) * limit;
-//         const whereCondition = SearchText
-//             ? {
-//                 [Sequelize.Op.or]: [
-//                     { FirstName: { [Sequelize.Op.iLike]: `%${SearchText}%` } },
-//                     { LastName: { [Sequelize.Op.iLike]: `%${SearchText}%` } },
-//                     { Email: { [Sequelize.Op.iLike]: `%${SearchText}%` } },
-//                     { PhoneNumber: { [Sequelize.Op.iLike]: `%${SearchText}%` } }
-//                 ]
-//             }
-//             : {};
-
-//         const { count, rows: customers } = await CustomerModel.findAndCountAll({
-//             include: [{ model: AddressModel, as: 'Address' }], 
-//             where: whereCondition,
-//             limit: parseInt(limit),
-//             offset: parseInt(offset)
-//         });
-
-//         const formattedCustomers = customers.map(customer => {
-//             const formattedAddresses = (customer.Address || []).map(address => ({
-//                 AddressLine1: address.AddressLine1,
-//                 AddressLine2: address.AddressLine2,
-//                 CityID: address.CityID,
-//                 StateID: address.StateID,
-//                 CountryID: address.CountryID,
-//                 ZipCode: address.ZipCode
-//             }));
-
-//             return {
-//                 ...customer.toJSON(),
-//                 Addresses: formattedAddresses, 
-//                 Address: undefined 
-//             };
-//         });
-
-//         const totalPages = Math.ceil(count / limit);
-
-//         res.status(200).json({
-//             StatusCode: 'SUCCESS',
-//             currentPage: parseInt(page),
-//             totalPages,
-//             totalItems: count,
-//             customers: formattedCustomers
-//         });
-//     } catch (error) {
-//         console.error('Error fetching customers:', error);
-//         res.status(500).json({ error: 'Internal Server Error' });
-//     }
-// };
 
 exports.getAllCustomers = async (req, res) => {
     const page = parseInt(req.query.page, 10) || 1;
@@ -356,6 +218,7 @@ exports.getAllCustomers = async (req, res) => {
                 CustomerFirstName: customer.FirstName,
                 CustomerLastName: customer.LastName,
                 CustomerID: customer.CustomerID,
+                CustomerNumber:customer.CustomerNumber,
                 CustomerEmail: customer.Email,
                 PhoneNumber: customer.PhoneNumber,
                 Alternative_PhoneNumber: customer.Alternative_PhoneNumber,
@@ -429,6 +292,7 @@ exports.getCustomerById = async (req, res) => {
             StatusCode: 'SUCCESS',
             customer: {
                 CustomerID: customer.CustomerID,
+                CustomerNumber:customer.CustomerNumber,
                 TenantID: customer.TenantID,
                 FirstName: customer.FirstName,
                 LastName: customer.LastName,
@@ -480,6 +344,7 @@ exports.getCustomerByIdWithoutAddress = async (req, res) => {
             StatusCode: 'SUCCESS',
             customer: {
                 CustomerID: customer.CustomerID,
+                CustomerNumber:customer.CustomerNumber,
                 TenantID: customer.TenantID,
                 FirstName: customer.FirstName,
                 LastName: customer.LastName,
@@ -543,40 +408,7 @@ exports.deleteCustomer = async (req, res) => {
     }
 };
 
-// exports.getOrderByCustomerId = async (req, res) => {
-//     const { id } = req.params;  
-  
-//     try {
-//       // Fetch orders for the given CustomerID
-//       const orders = await OrderTabelModel.findAll({
-//         where: { CustomerID: id }, 
-//         include: [
-//           {
-//             model: CustomerModel, as:'Customer',
-//             include: [
-//               { model: AddressModel, as: 'Address' },
-//               { model: StoreModel, as: 'Store' }  
-//             ],
-//           },
-//         ],
-//       });
-  
-//       if (!orders || orders.length === 0) {
-//         return res.status(200).json({ message: 'No orders available for this customer.' });
-//       }
-  
-//       res.status(200).json({
-//         StatusCode: 'SUCCESS',
-//         message: 'Orders fetched successfully by Customer ID',
-//         orders,
-//       });
-  
-//     } catch (error) {
-//       console.error('Error fetching orders by Customer ID:', error);
-//       res.status(500).json({ error: 'Internal Server Error' });
-//     }
-//   };
-  
+
 
 
 exports.getOrderByCustomerId = async (req, res) => {

@@ -7,6 +7,7 @@ const fs = require('fs');
 const moment = require('moment'); 
 const path = require('path');
 const ExcelJS = require('exceljs');
+const Store = require('../Models/Store');
 
 exports.getPaymentReport = async (req, res) => {
     const { StartDate, EndDate, StoreID, OrderID } = req.body;
@@ -42,6 +43,7 @@ exports.getPaymentReport = async (req, res) => {
                         },
                     ],
                 },
+                { model: StoreModel, as: 'StoreTabel', attributes: ['StoreCode', 'StoreName', 'StoreID'] }
             ],
             attributes: ['PaymentID','OrderID','Amount', 'PaymentDate','CreatedAt'],
             order: [
@@ -55,6 +57,7 @@ exports.getPaymentReport = async (req, res) => {
         const paymentReportData = payments.map(payment => ({
             PaymentNumber: payment.PaymentID,
             OrderNumber: payment.OrdersTable?.OrderNumber || '',
+            StoreName:payment.StoreTabel?.StoreName || '',
             CustomerName: payment.OrdersTable?.Customer ? `${payment.OrdersTable.Customer.FirstName} ${payment.OrdersTable.Customer.LastName}`.trim() || '' : '',
             Email: payment.OrdersTable?.Customer?.Email || '',
             Contact: payment.OrdersTable?.Customer?.PhoneNumber || '',
@@ -70,6 +73,7 @@ exports.getPaymentReport = async (req, res) => {
         const headers = [
             { header: 'Payment Number', key: 'PaymentNumber', width: 15 },
             { header: 'Order Number', key: 'OrderNumber', width: 15 },
+            { header: 'Store Name', key:'StoreName', with:30 },
             { header: 'Customer Name', key: 'CustomerName', width: 30 },
             { header: 'Email', key: 'Email', width: 25 },
             { header: 'Contact', key: 'Contact', width: 15 },
@@ -177,6 +181,7 @@ exports.getOrderReport = async (req, res) => {
                     as: 'Payments',
                     attributes: ['Amount', ],
                 },
+                { model: StoreModel, as: 'StoreTabel', attributes: ['StoreCode', 'StoreName', 'StoreID'] }
             ],
             order: [
                 [Sequelize.literal('GREATEST("OrdersTable"."CreatedAt", "OrdersTable"."UpdatedAt")'), 'DESC'],
@@ -204,6 +209,7 @@ exports.getOrderReport = async (req, res) => {
 
             orderReportData.push({
                 OrderNumber: order.OrderNumber,
+                StoreName: order.StoreTabel?.StoreName || 'N/A',
                 OrderDate: order.OrderDate ? order.OrderDate.toISOString().split('T')[0] : 'N/A',
                 OrderStatus: order.Order_TabelStatus?.OrderStatus || 'N/A',
                 ExpectedDeliveryDate: order.DeliveryDate ? order.DeliveryDate.toISOString().split('T')[0] : 'N/A',
@@ -224,6 +230,7 @@ exports.getOrderReport = async (req, res) => {
         // Define headers with custom width
         worksheet.columns = [
             { header: 'Order Number', key: 'OrderNumber', width: 20 },
+            { header: 'Store Name', key:'StoreName',  width:20},
             { header: 'Order Date', key: 'OrderDate', width: 15 },
             { header: 'Order Status', key: 'OrderStatus', width: 15 },
             { header: 'Expected Delivery Date', key: 'ExpectedDeliveryDate', width: 20 },
@@ -323,6 +330,7 @@ exports.getCustomerReport = async (req, res) => {
                         { model: CountryModel, as: 'Country', attributes: ['CountryName'] }
                     ]
                 },
+                { model: StoreModel, as: 'Store', attributes: ['StoreCode', 'StoreName', 'StoreID'] }
             ],
            
             attributes: ['FirstName', 'LastName', 'Email', 'PhoneNumber', 'ReferedBy', 'CreatedAt'],
@@ -342,6 +350,7 @@ exports.getCustomerReport = async (req, res) => {
             Email: customer.Email,
             Phone: customer.PhoneNumber,
             ReferedBy: customer.ReferedBy || 'N/A',
+            StoreName: customer.Store ? customer.Store.StoreName :'N/A',
             Address: customer.Address.length>0
                 ? customer.Address[0].City.CityName + ","
                  +customer.Address[0].State.StateName +", "
@@ -360,6 +369,7 @@ exports.getCustomerReport = async (req, res) => {
             { header: 'Phone', key: 'Phone', width: 15 },
             { header: 'ReferedBy', key: 'ReferedBy', width: 15 },
             { header: 'Address', key: 'Address', width: 40 },
+            { header: 'Store Name',key:'StoreName',width:25},
             { header: 'CreatedAt', key: 'CreatedAt', width: 15 },
         ];
         worksheet.getRow(1).eachCell(cell => {

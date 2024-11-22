@@ -7,6 +7,7 @@ const moment = require('moment');
 const ExcelJS = require('exceljs');
 const { sendTemplateEmail } = require('../middleware/SendEmail'); 
 const { sendSMS } = require('../middleware/twilioConfig');
+const { assign } = require('nodemailer/lib/shared');
 
 const upload = multer({ storage: storage }).fields([
   { name: 'UploadImages', maxCount: 10 },   
@@ -173,6 +174,7 @@ exports.createOrderOrUpdate = async (req, res) => {
         UserID,
         OrderStatus: newOrder.OrderStatus,
         StatusID: 1,
+        UserRoleID:1,
         // StartDate: new Date(),
         EndDate: updatedStatusDeliveryDate, 
         AssignTo,
@@ -221,8 +223,8 @@ exports.createOrderOrUpdate = async (req, res) => {
         minimumFractionDigits: 2,
       }).format(TotalAmount).replace('₹', ''),
       DeliveryAddress: `${address.AddressLine1}${address.AddressLine2 ? '\n' + address.AddressLine2 : ''}
-${address.City ? address.City.CityName : ''}, ${address.State ? address.State.StateName : ''} ${address.ZipCode}
-${address.Country ? address.Country.CountryName : ''}`,
+      ${address.City ? address.City.CityName : ''}, ${address.State ? address.State.StateName : ''} ${address.ZipCode}
+      ${address.Country ? address.Country.CountryName : ''}`,
       customerPhone: customer.PhoneNumber,
       AddressLine1: address.AddressLine1,
       AddressLine2: address.AddressLine2,
@@ -443,6 +445,9 @@ exports.deleteOrderById = async (req, res) => {
         res.status(500).json({ error: 'Internal Server Error' });
     }
 };
+
+// DesginerID :Role;
+// assign:User
 
 
 
