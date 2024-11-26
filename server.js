@@ -15,6 +15,8 @@ const OrderStatusRoutes=require('./Routes/Routes');
 const InventoryRoutes = require('./Routes/Routes');
 const FeedbackRoutes = require('./Routes/Routes');
 const DashboardRoutes = require('./Routes/Routes');
+const ProjectTypeRoutes = require('./Routes/Routes');
+
 const cors = require('cors');
 const authRoutes = require('./Routes/Routes');
 const path = require('path');
@@ -52,7 +54,7 @@ app.use('/api/reports', reportsRoute);
 app.use('/api/InventoryFile', InventoryRoutes);
 app.use('/api/Feedback', FeedbackRoutes);
 app.use('/api/Dashboard', DashboardRoutes);
-
+app.use('/api/ProjectTypeRoutes',ProjectTypeRoutes);
 // Error Handling Middleware
 app.use((err, req, res, next) => {
     console.error('Server Error:', err);

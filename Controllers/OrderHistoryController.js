@@ -257,6 +257,11 @@ if (!OrderHistoryID || OrderHistoryID == 0) {
         }
     }
 
+     // Increment subStatusId when OrderStatus reaches 10
+     if (StatusID === 10) {
+        subStatusId = orderExists.SubStatusId + 1;
+    }
+    
     // Set SubStatusId to 1 if StatusID is 7
     if (StatusID === 7) {
         subStatusId = 1;

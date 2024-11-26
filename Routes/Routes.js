@@ -13,6 +13,7 @@ const ReportsController=require('../Controllers/ReportsController');
 const InventoryController=require('../Controllers/InventoryController');
 const FeedbackController=require('../Controllers/FeedBackController');
 const DashboardController=require('../Controllers/DashboardController');
+const ProjectTypeController=require('../Controllers/ProjectTypeController');
 
 const { createOrderOrUpdate,updateOrder,getOrderById,deleteOrderById,getAllOrders,GetSaleOrderReport,updateSubOrderStatus } = require('../Controllers/ordercontroller');
 const { getAllPayments, getPaymentById,getPaymentByPaymentId,createOrUpdatePayment } = require('../Controllers/PaymentController'); 
@@ -135,6 +136,13 @@ router.delete('/DeleteFeedBack/:orderId',FeedbackController.DeleteFeedBack);
 
 router.post('/getOverAllDataForDashboard',DashboardController.getOverAllDataForDashboard);
 router.post('/getSalesAndPaymentReportByMonth',DashboardController.getSalesAndPaymentReportByMonth);
+
+//productType
+router.get('/listProjectTypes',ProjectTypeController.listProjectTypes);
+router.get('/getAllProjectTypes',ProjectTypeController.getAllProjectTypes);
+router.post('/addProjectType',ProjectTypeController.addProjectType);
+router.put('/updateProjectType/:id',ProjectTypeController.updateProjectType);
+router.delete('/deleteProjectType/:ProjectTypeID',ProjectTypeController.deleteProjectType);
 
 module.exports = router;
 

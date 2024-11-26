@@ -118,7 +118,7 @@ exports.createOrUpdateCustomer = async (req, res) => {
                 }, { transaction });
 
                 // Generate the CustomerNumber using StoreCode and CustomerID
-                const customerNumber = `IS/${storeCode}/${newCustomer.CustomerID}`;
+                const customerNumber = `${storeCode}/${newCustomer.CustomerID}`;
 
                 // Update the new customer with the generated CustomerNumber
                 await newCustomer.update({ CustomerNumber: customerNumber }, { transaction });

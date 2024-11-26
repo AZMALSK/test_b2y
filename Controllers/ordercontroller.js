@@ -134,7 +134,7 @@ exports.createOrderOrUpdate = async (req, res) => {
         UpdatedAt: new Date(),
       }, { transaction });
 
-      const orderNumber = `IM/${StoreCode}/${newOrder.OrderID}`;
+      const orderNumber = `${StoreCode}/${newOrder.OrderID}`;
       await newOrder.update({ OrderNumber: orderNumber }, { transaction });
 
       operationMessage = 'Order updated successfully';
