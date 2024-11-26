@@ -48,6 +48,7 @@ const OrderStatusModel= require('../Models/OrderStatus')(sequelize);
 const OrderTabelModel = require('../Models/OrderTabel')(sequelize);
 const InventoryModel= require('../Models/InventoryModel')(sequelize);
 const FeedbackModel= require('../Models/FeedBack')(sequelize);
+const ProjectTypeModel = require('../Models/ProjectType')(sequelize);
 // const NewCityModel= require('../Models/NewCity')(sequelize);
 // const NewStateModel=require('../Models/NewState')(sequelize);
 
@@ -187,7 +188,7 @@ sequelize.sync({ alter: true }).then(() => {
     console.log('Database & tables created!');
 });
 
-module.exports = { sequelize, CustomerModel,AddressModel,UserManagementModel,StoreModel,RoleModel,OrderTabelModel,
+module.exports = { sequelize, CustomerModel,AddressModel,UserManagementModel,StoreModel,RoleModel,OrderTabelModel,ProjectTypeModel,
   // NewCityModel,
   // NewStateModel,
   OrderHistory,Payment,UserAddressModel,MapStoreUser,CityModel,StateModel,CountryModel,EmailTemplate,PermissionsModel,MapRolePermissionsModel,OrderStatusModel,InventoryModel,FeedbackModel};

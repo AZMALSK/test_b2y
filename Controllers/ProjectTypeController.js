@@ -1,7 +1,7 @@
 const multer = require('multer');
 const { inventorystorage } = require('../middleware/Cloundinary');
 // const InventoryFile = require('../Models/InventoryModel');
-const {ProjectTypeModel,OrderTabelModel , CustomerModel} = require('../ConnectionDB/Connect');
+const { ProjectTypeModel,OrderTabelModel , CustomerModel} = require('../ConnectionDB/Connect');
 // const upload = multer({ storage: inventorystorage }).single('inventoryFile');
 const path = require('path');
 const moment = require('moment');
