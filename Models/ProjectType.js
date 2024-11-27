@@ -10,6 +10,7 @@ module.exports = (sequelize) => {
         ProjectTypeName: {
             type: DataTypes.STRING(100),
             allowNull: false,
+            unique: true
         },
         FileUrl: {
             type: DataTypes.STRING,

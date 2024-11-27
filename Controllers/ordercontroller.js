@@ -1065,3 +1065,79 @@ async function triggerPaymentEmail(OrderID) {
     }
 }
 
+exports.triggerAdvanceMeasurementPaymentEmail = async (OrderID) => {
+  try {
+      // Find the order with final measurements approved status
+      const orderMeasurement = await OrderHistory.findOne({
+          where: { 
+              OrderID, 
+              StatusID: 5 // Assuming status 8 represents "Final Measurements Approved"
+          }
+      });
+
+      if (!orderMeasurement) {
+          throw new Error('No order found with final measurements approved.');
+      }
+
+      // Fetch the full order details
+      const order = await OrderTableModel.findOne({  // Corrected model name if necessary
+          where: { OrderID },
+          include: [
+              { 
+                  model: CustomerModel,
+                  attributes: ['CustomerID', 'FirstName', 'Email']
+              },
+              {
+                  model: StoreModel,
+                  attributes: ['StoreID', 'StoreName']
+              }
+          ]
+      });
+
+      if (!order) {
+          throw new Error('Order not found.');
+      }
+
+      // Calculate 30% advance amount
+      const totalAmount = parseFloat(order.TotalAmount);
+      const advanceAmount = totalAmount * 0.30; // 30% of total amount
+
+      // Prepare email data
+      const emailData = {
+          customerFirstName: order.Customer.FirstName,
+          customerEmail: order.Customer.Email,
+          OrderNumber: order.OrderNumber,
+          OrderDate: order.OrderDate,
+          Type: order.Type,
+          TotalAmount: totalAmount.toFixed(2),
+          AdvanceAmount: advanceAmount.toFixed(2),
+          StoreName: order.Store.StoreName,
+          PaymentInstructions: 'Please pay 30% advance amount to start production.',
+          PaymentDueDate: calculateDueDate() // You'll need to implement this function
+      };
+
+      // Create a payment record for the advance payment
+      await PaymentModel.create({
+          OrderID: OrderID,
+          Amount: advanceAmount,
+          PaymentType: 'Advance',
+          StatusID: 1, // Pending payment status
+          CreatedAt: new Date()
+      });
+
+      // Send email template for advance payment
+      await sendTemplateEmail('AdvanceMeasurementPayment', emailData);
+
+      // Optionally, update order status to indicate payment pending
+      await OrderTableModel.update(
+          { StatusID: 9 }, // New status for "Awaiting Advance Payment"
+          { where: { OrderID } }
+      );
+
+      return true;
+  } catch (error) {
+      console.error('Error triggering advance payment email:', error);
+      // Optionally log to a logging service
+      throw error; // Re-throw to allow caller to handle
+  }
+};

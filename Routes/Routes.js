@@ -15,7 +15,7 @@ const FeedbackController=require('../Controllers/FeedBackController');
 const DashboardController=require('../Controllers/DashboardController');
 const ProjectTypeController=require('../Controllers/ProjectTypeController');
 
-const { createOrderOrUpdate,updateOrder,getOrderById,deleteOrderById,getAllOrders,GetSaleOrderReport,updateSubOrderStatus } = require('../Controllers/ordercontroller');
+const { createOrderOrUpdate,updateOrder,getOrderById,deleteOrderById,getAllOrders,GetSaleOrderReport,updateSubOrderStatus,triggerAdvanceMeasurementPaymentEmail } = require('../Controllers/ordercontroller');
 const { getAllPayments, getPaymentById,getPaymentByPaymentId,createOrUpdatePayment } = require('../Controllers/PaymentController'); 
 const { getAllOrderHistories, getOrderHistoryById,getOrderHistoryByOrderHistoryId,createOrUpdateOrderHistory,getOrderHistoryDocument,getusertasks,updateFinalMeasurementStatus,checkStatusAndSendEmail,checkPaymentStatusAndSendEmail} = require('../Controllers/OrderHistoryController'); 
 const { createOrUpdateMapStoreUser, getAllMapStoreUsers, getMapStoreUserById,getMapStoreUserByUserId ,deleteMapStoreUser} = require('../Controllers/MapStoreUserController');
@@ -68,6 +68,8 @@ router.delete('/deleteOrderById/:OrderID', deleteOrderById);
 router.get('/getAllOrders', getAllOrders);
 router.post('/GetSaleOrderReport',GetSaleOrderReport);
 router.post('/updateSubOrderStatus',updateSubOrderStatus);
+router.post('/triggerAdvanceMeasurementPaymentEmail',triggerAdvanceMeasurementPaymentEmail);
+
 
 //Routes for Roles
 router.post('/createOrUpdateRole',roleController.createOrUpdateRole);
@@ -142,6 +144,7 @@ router.get('/listProjectTypes',ProjectTypeController.listProjectTypes);
 router.get('/getAllProjectTypes',ProjectTypeController.getAllProjectTypes);
 router.post('/addProjectType',ProjectTypeController.addProjectType);
 router.put('/updateProjectType/:id',ProjectTypeController.updateProjectType);
+router.get('/getProjectTypeById/:id',ProjectTypeController.getProjectTypeById);
 router.delete('/deleteProjectType/:ProjectTypeID',ProjectTypeController.deleteProjectType);
 
 module.exports = router;
