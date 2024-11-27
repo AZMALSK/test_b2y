@@ -49,6 +49,7 @@ const OrderTabelModel = require('../Models/OrderTabel')(sequelize);
 const InventoryModel= require('../Models/InventoryModel')(sequelize);
 const FeedbackModel= require('../Models/FeedBack')(sequelize);
 const ProjectTypeModel = require('../Models/ProjectType')(sequelize);
+const ReferenceModel = require('../Models/Reference')(sequelize);
 // const NewCityModel= require('../Models/NewCity')(sequelize);
 // const NewStateModel=require('../Models/NewState')(sequelize);
 
@@ -174,6 +175,26 @@ FeedbackModel.belongsTo(OrderTabelModel, {foreignKey: 'OrderID',as: 'OrdersTable
 // UserManaement to Roles association
 UserManagementModel.belongsTo(RoleModel, { foreignKey: 'RoleID', as: 'UserRole' });
 RoleModel.hasMany(UserManagementModel, { foreignKey: 'RoleID' });
+
+
+
+  // ReferenceModel associations
+// Setup associations
+// Object.keys(sequelize.models).forEach(ReferenceModel => {
+//   if (sequelize.models[ReferenceModel].associate) {
+//       sequelize.models[ReferenceModel].associate(sequelize.models);
+//   }
+// });
+ReferenceModel.belongsTo(ReferenceModel, {
+          foreignKey: 'parentId',
+          as: 'parent'
+      });
+  
+      ReferenceModel.hasMany(ReferenceModel, {
+          foreignKey: 'parentId',
+          as: 'children'
+      });
+
 // Test the connection
 sequelize.authenticate()
   .then(() => {
@@ -188,7 +209,7 @@ sequelize.sync({ alter: true }).then(() => {
     console.log('Database & tables created!');
 });
 
-module.exports = { sequelize, CustomerModel,AddressModel,UserManagementModel,StoreModel,RoleModel,OrderTabelModel,ProjectTypeModel,
+module.exports = { sequelize, CustomerModel,AddressModel,UserManagementModel,StoreModel,RoleModel,OrderTabelModel,ProjectTypeModel,ReferenceModel,
   // NewCityModel,
   // NewStateModel,
   OrderHistory,Payment,UserAddressModel,MapStoreUser,CityModel,StateModel,CountryModel,EmailTemplate,PermissionsModel,MapRolePermissionsModel,OrderStatusModel,InventoryModel,FeedbackModel};

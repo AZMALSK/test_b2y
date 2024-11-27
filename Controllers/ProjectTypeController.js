@@ -6,7 +6,7 @@ const { ProjectTypeModel,OrderTabelModel , CustomerModel} = require('../Connecti
 const path = require('path');
 const moment = require('moment');
 const supabase = require('../middleware/supabase');
- 
+const { Op } = require('sequelize'); // Import Op for Sequelize operators
  
 const upload = multer({ storage: multer.memoryStorage() }).fields([
     { name: 'UploadDocument', maxCount: 10 }
@@ -236,50 +236,75 @@ exports.addProjectType = async (req, res) => {
         }
     });
 };
+
 exports.updateProjectType = async (req, res) => {
-    try {
-        const { id } = req.params; // Extract the ProjectTypeID from the request parameters
-        const { ProjectTypeName, Status, UpdatedBy } = req.body;
-        const file = req.files?.UploadDocument?.[0] || null;
- 
-        let fileUrl = null;
-        if (file) {
-            try {
+    upload(req, res, async (err) => {
+        if (err) {
+            return res.status(400).json({ message: 'File upload error', error: err.message });
+        }
+
+        try {
+            const { ProjectTypeName, Status } = req.body;
+            const projectTypeId = req.params.id; // ID passed as a route parameter
+            const file = req.files?.UploadDocument ? req.files.UploadDocument[0] : null;
+
+            let fileUrl = null;
+            if (file) {
                 const uploadResult = await uploadFileToSupabase(file);
                 fileUrl = uploadResult.publicUrl;
-            } catch (uploadError) {
-                console.error('Error uploading file:', uploadError);
-                return res.status(500).json({ message: 'File upload to Supabase failed', error: uploadError.message });
             }
+
+            // Check if the project type exists
+            const existingProjectType = await ProjectTypeModel.findOne({
+                where: { ProjectTypeID: projectTypeId }, // Use ProjectTypeID
+            });
+
+            if (!existingProjectType) {
+                return res.status(404).json({
+                    message: 'Project Type not found',
+                });
+            }
+
+            // Check for duplicate project type names (excluding the current record)
+            const duplicateProjectType = await ProjectTypeModel.findOne({
+                where: {
+                    ProjectTypeName: ProjectTypeName.trim(),
+                    ProjectTypeID: { [Op.ne]: projectTypeId }, // Exclude the current record
+                },
+            });
+
+            if (duplicateProjectType) {
+                return res.status(400).json({
+                    message: 'A Project Type with this name already exists.',
+                });
+            }
+
+            // Update the project type fields
+            const updatedFields = {
+                ProjectTypeName: ProjectTypeName.trim(),
+                Status,
+            };
+
+            if (fileUrl) {
+                updatedFields.FileUrl = fileUrl;
+            }
+
+            const updatedProjectType = await existingProjectType.update(updatedFields);
+
+            res.status(200).json({
+                message: 'Project Type updated successfully',
+                data: updatedProjectType,
+            });
+        } catch (error) {
+            console.error('Error updating Project Type:', error);
+            res.status(500).json({
+                message: 'Error updating Project Type',
+                error: error.message,
+            });
         }
- 
-        // Find the existing record by ID
-        const existingProjectType = await ProjectTypeModel.findByPk(id);
- 
-        if (!existingProjectType) {
-            return res.status(404).json({ message: 'Project Type not found' });
-        }
- 
-        // Update the record
-        const updatedFields = {
-            ProjectTypeName: ProjectTypeName || existingProjectType.ProjectTypeName,
-            FileUrl: fileUrl || existingProjectType.FileUrl,
-            Status: Status || existingProjectType.Status,
-            UpdatedBy: ProjectTypeModel.ProjectTypeID,
-            UpdatedAt: new Date(),
-        };
- 
-        await existingProjectType.update(updatedFields);
- 
-        return res.status(200).json({
-            message: 'Project Type updated successfully',
-            data: existingProjectType,
-        });
-    } catch (error) {
-        console.error('Error updating Project Type:', error);
-        return res.status(500).json({ message: 'Internal Server Error', error: error.message });
-    }
+    });
 };
+
 exports.getProjectTypeById = async (req, res) => {
     try {
         const { id } = req.params; // Extract the ProjectTypeID from the request parameters
@@ -320,4 +345,3 @@ exports.deleteProjectType = async (req, res) => {
         res.status(500).json({ message: 'Error deleting Project Type', error });
     }
 };
- 

@@ -14,6 +14,7 @@ const InventoryController=require('../Controllers/InventoryController');
 const FeedbackController=require('../Controllers/FeedBackController');
 const DashboardController=require('../Controllers/DashboardController');
 const ProjectTypeController=require('../Controllers/ProjectTypeController');
+const referenceController = require('../Controllers/referenceController');
 
 const { createOrderOrUpdate,updateOrder,getOrderById,deleteOrderById,getAllOrders,GetSaleOrderReport,updateSubOrderStatus,triggerAdvanceMeasurementPaymentEmail } = require('../Controllers/ordercontroller');
 const { getAllPayments, getPaymentById,getPaymentByPaymentId,createOrUpdatePayment } = require('../Controllers/PaymentController'); 
@@ -146,6 +147,18 @@ router.post('/addProjectType',ProjectTypeController.addProjectType);
 router.put('/updateProjectType/:id',ProjectTypeController.updateProjectType);
 router.get('/getProjectTypeById/:id',ProjectTypeController.getProjectTypeById);
 router.delete('/deleteProjectType/:ProjectTypeID',ProjectTypeController.deleteProjectType);
+
+
+// Reference routes
+router.post('/reference', referenceController.createReference);
+router.post('/sub-reference', referenceController.createSubReference);
+router.get('/references', referenceController.getAllReferences);
+router.get('/reference/:id', referenceController.getReferenceById);
+router.put('/reference/:id', referenceController.updateReference);
+router.delete('/reference/:id', referenceController.deleteReference);
+router.post('/reference/bulk-delete', referenceController.bulkDeleteReferences);
+router.patch('/reference/:id/status', referenceController.changeReferenceStatus);
+
 
 module.exports = router;
 

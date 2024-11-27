@@ -1126,7 +1126,7 @@ exports.triggerAdvanceMeasurementPaymentEmail = async (OrderID) => {
       });
 
       // Send email template for advance payment
-      await sendTemplateEmail('AdvanceMeasurementPayment', emailData);
+      await sendTemplateEmail('AdvancePaymentTemplate', emailData);
 
       // Optionally, update order status to indicate payment pending
       await OrderTableModel.update(
