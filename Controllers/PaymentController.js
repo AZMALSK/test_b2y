@@ -129,7 +129,7 @@ exports.getPaymentByPaymentId = async (req, res) => {
 
 
 exports.createOrUpdatePayment = async (req, res) => {
-    const { PaymentID, OrderID, TenantID, UserID, CustomerID, PaymentDate, Amount, PaymentComments, PaymentMethod, MaskedCardNumber} = req.body;
+    const { PaymentID, OrderID, TenantID, UserID, CustomerID, PaymentDate, Amount, PaymentComments,StoreID, PaymentMethod, MaskedCardNumber} = req.body;
 
     try {
         // Check if Order exists in Orders table
@@ -147,6 +147,7 @@ exports.createOrUpdatePayment = async (req, res) => {
                 CustomerID,
                 PaymentDate,
                 Amount,
+                StoreID,
                 PaymentComments,
                 PaymentMethod,
                 MaskedCardNumber,
@@ -173,6 +174,7 @@ exports.createOrUpdatePayment = async (req, res) => {
                 CustomerID,
                 PaymentDate,
                 Amount,
+                StoreID,
                 PaymentComments,
                 PaymentMethod,
                 UpdatedAt: new Date(),

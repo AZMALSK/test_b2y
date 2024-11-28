@@ -43,7 +43,7 @@ module.exports=(sequelize)=>{
         },
         StoreID:{
             type:DataTypes.INTEGER,
-            allowNull: true
+            allowNull: false
         },
         CreatedAt: {
             type: DataTypes.DATE,
