@@ -153,7 +153,7 @@ router.delete('/deleteProjectType/:ProjectTypeID',ProjectTypeController.deletePr
 router.post('/createParentOrChindreference', referenceController.createReference);
 router.get('/parents', referenceController.getAllParentReferences);
 router.get('/children', referenceController.getAllChildReferences);
-router.get('/reference/:id', referenceController.getReferenceById);
+router.get('/getChildrenByParentId/:parentId', referenceController.getChildrenByParentId);
 router.put('/reference/:id', referenceController.updateReference);
 router.delete('/reference/:id', referenceController.deleteReference);
 router.get('/getAllData', referenceController.getAllData); // Get all data updated one
