@@ -1,4 +1,4 @@
-const {   UserManagementModel,OrderTabelModel , CustomerModel, AddressModel, Payment,OrderHistory, OrderStatusModel, sequelize ,StoreModel,CityModel,StateModel,CountryModel } = require('../ConnectionDB/Connect');
+const {   UserManagementModel,OrderTabelModel , CustomerModel, AddressModel, Payment,OrderHistory, OrderStatusModel, sequelize ,StoreModel,CityModel,StateModel,CountryModel ,ProjectTypeModel,ReferenceModel, } = require('../ConnectionDB/Connect');
 const { Sequelize, DataTypes } = require('sequelize');
 const multer = require('multer');
 const { storage } = require('../middleware/Cloundinary');
@@ -26,17 +26,19 @@ exports.createOrderOrUpdate = async (req, res) => {
     OrderStatus,
     OrderBy,
     DeliveryDate,
-    Type,
+    // Type,
     Comments,
     UserID,
     AssignTo,
     StatusDeliveryDate,
-    ReferedBy,
+    // ReferedBy,
     ExpectedDurationDays,
     DesginerName,
     StoreCode,  // Ensure this is included for both create and update
     SubStatusId,
-    StoreID
+    StoreID,
+    ProjectTypeID,  // New field
+    ReferredByID    // New field
   } = req.body;
 
   const transaction = await sequelize.transaction();
@@ -63,6 +65,25 @@ exports.createOrderOrUpdate = async (req, res) => {
       return res.status(200).json({ error: 'StoreID not found.' });
     }
 
+
+        // Get ProjectType if ProjectTypeID is provided
+        let projectType = null;
+        if (ProjectTypeID) {
+          projectType = await ProjectTypeModel.findByPk(ProjectTypeID);
+          if (!projectType) {
+            return res.status(200).json({ error: 'ProjectTypeID not found.' });
+          }
+        }
+    
+        // Get Reference if ReferredByID is provided
+        let reference = null;
+        if (ReferredByID) {
+          reference = await ReferenceModel.findByPk(ReferredByID);
+          if (!reference) {
+            return res.status(200).json({ error: 'ReferredByID not found.' });
+          }
+        }
+    
     // Validate the address exists for the customer and include associations
     const existingAddress = await AddressModel.findOne({
       where: {
@@ -120,9 +141,9 @@ exports.createOrderOrUpdate = async (req, res) => {
         OrderStatus,
         OrderBy,
         DeliveryDate,
-        Type,
+        // Type,
         Comments,
-        ReferedBy,
+        // ReferedBy,
         DesginerName,
         StoreID,
         UserID,
@@ -130,6 +151,8 @@ exports.createOrderOrUpdate = async (req, res) => {
         ExpectedDurationDays,
         StoreCode,
         SubStatusId,
+        Type: projectType ? projectType.ProjectTypeName : null,        // Dynamically set Type
+        ReferedBy: reference ? reference.ReferenceName : null,       
         UpdatedBy: OrderBy,
         UpdatedAt: new Date(),
       }, { transaction });
@@ -152,15 +175,17 @@ exports.createOrderOrUpdate = async (req, res) => {
         SubStatusId: 0,
         OrderBy,
         DeliveryDate,
-        Type,
+        // Type,
         Comments,
-        ReferedBy,
+        // ReferedBy,
         DesginerName,
         StoreID,
         UserID,
         ExpectedDurationDays,
         StoreCode,
         StatusDeliveryDate: updatedStatusDeliveryDate, // Use updated date
+        Type: projectType ? projectType.ProjectTypeName : null,     
+        ReferedBy: reference ? reference.name : null,       
         CreatedBy: OrderBy,
         CreatedAt: new Date(),
         UpdatedBy: OrderBy,
@@ -212,7 +237,7 @@ exports.createOrderOrUpdate = async (req, res) => {
       customerFirstName: customer.FirstName,
       customerEmail: customer.Email,
       OrderNumber: newOrder.OrderNumber || `IM/${StoreCode}/${newOrder.OrderID}`,
-      Type: Type,
+      Type: newOrder.Type,
       StoreID: newOrder.StoreID,
       StoreName: Store.StoreName,
       OrderDate: formatDate(newOrder.CreatedAt),
@@ -1065,13 +1090,97 @@ async function triggerPaymentEmail(OrderID) {
     }
 }
 
-exports.triggerAdvanceMeasurementPaymentEmail = async (OrderID) => {
+// exports.triggerAdvanceMeasurementPaymentEmail = async (OrderID) => {
+//   try {
+//       // Find the order with final measurements approved status
+//       const orderMeasurement = await OrderHistory.findOne({
+//           where: { 
+//               OrderID, 
+//               StatusID: 5 // Assuming status 8 represents "Final Measurements Approved"
+//           }
+//       });
+
+//       if (!orderMeasurement) {
+//           throw new Error('No order found with final measurements approved.');
+//       }
+
+//       // Fetch the full order details
+//       const order = await OrderTableModel.findOne({  // Corrected model name if necessary
+//           where: { OrderID },
+//           include: [
+//               { 
+//                   model: CustomerModel,
+//                   attributes: ['CustomerID', 'FirstName', 'Email']
+//               },
+//               {
+//                   model: StoreModel,
+//                   attributes: ['StoreID', 'StoreName']
+//               }
+//           ]
+//       });
+
+//       if (!order) {
+//           throw new Error('Order not found.');
+//       }
+
+//       // Calculate 30% advance amount
+//       const totalAmount = parseFloat(order.TotalAmount);
+//       const advanceAmount = totalAmount * 0.30; // 30% of total amount
+
+//       // Prepare email data
+//       const emailData = {
+//           customerFirstName: order.Customer.FirstName,
+//           customerEmail: order.Customer.Email,
+//           OrderNumber: order.OrderNumber,
+//           OrderDate: order.OrderDate,
+//           Type: order.Type,
+//           TotalAmount: totalAmount.toFixed(2),
+//           AdvanceAmount: advanceAmount.toFixed(2),
+//           StoreName: order.Store.StoreName,
+//           PaymentInstructions: 'Please pay 30% advance amount to start production.',
+//           PaymentDueDate: calculateDueDate() // You'll need to implement this function
+//       };
+
+//       // Create a payment record for the advance payment
+//       await PaymentModel.create({
+//           OrderID: OrderID,
+//           Amount: advanceAmount,
+//           PaymentType: 'Advance',
+//           StatusID: 1, // Pending payment status
+//           CreatedAt: new Date()
+//       });
+
+//       // Send email template for advance payment
+//       await sendTemplateEmail('AdvancePaymentTemplate', emailData);
+
+//       // Optionally, update order status to indicate payment pending
+//       await OrderTableModel.update(
+//           { StatusID: 9 }, // New status for "Awaiting Advance Payment"
+//           { where: { OrderID } }
+//       );
+
+//       return true;
+//   } catch (error) {
+//       console.error('Error triggering advance payment email:', error);
+//       // Optionally log to a logging service
+//       throw error; // Re-throw to allow caller to handle
+//   }
+// };
+
+exports.triggerAdvanceMeasurementPaymentEmail = async (req) => {
   try {
-      // Find the order with final measurements approved status
+      // Get OrderID from request (either query or body)
+      const OrderID = req.query.OrderID || req.body.OrderID;
+
+      if (!OrderID || isNaN(OrderID)) {
+          throw new Error('Invalid or missing OrderID.');
+      }
+
+      // Fetch the order history with the desired status
       const orderMeasurement = await OrderHistory.findOne({
           where: { 
-              OrderID, 
-              StatusID: 5 // Assuming status 8 represents "Final Measurements Approved"
+              OrderID: parseInt(OrderID, 10), 
+              StatusID: 5 // Assuming 5 represents "Final Measurements Approved"
           }
       });
 
@@ -1080,15 +1189,15 @@ exports.triggerAdvanceMeasurementPaymentEmail = async (OrderID) => {
       }
 
       // Fetch the full order details
-      const order = await OrderTableModel.findOne({  // Corrected model name if necessary
-          where: { OrderID },
+      const order = await OrderTabelModel.findOne({
+          where: { OrderID: parseInt(OrderID, 10) },
           include: [
               { 
-                  model: CustomerModel,
+                  model: CustomerModel, as: 'Customer',
                   attributes: ['CustomerID', 'FirstName', 'Email']
               },
               {
-                  model: StoreModel,
+                  model: StoreModel,as: 'StoreTabel',
                   attributes: ['StoreID', 'StoreName']
               }
           ]
@@ -1111,14 +1220,16 @@ exports.triggerAdvanceMeasurementPaymentEmail = async (OrderID) => {
           Type: order.Type,
           TotalAmount: totalAmount.toFixed(2),
           AdvanceAmount: advanceAmount.toFixed(2),
-          StoreName: order.Store.StoreName,
+          StoreName: order.StoreName,
           PaymentInstructions: 'Please pay 30% advance amount to start production.',
-          PaymentDueDate: calculateDueDate() // You'll need to implement this function
+          // PaymentDueDate: calculateDueDate() // Implement this function to calculate due date
       };
 
       // Create a payment record for the advance payment
-      await PaymentModel.create({
-          OrderID: OrderID,
+      await Payment.create({
+          OrderID: parseInt(OrderID, 10),
+          TenantID:1,
+          CustomerID:order.Customer.CustomerID,
           Amount: advanceAmount,
           PaymentType: 'Advance',
           StatusID: 1, // Pending payment status
@@ -1128,16 +1239,15 @@ exports.triggerAdvanceMeasurementPaymentEmail = async (OrderID) => {
       // Send email template for advance payment
       await sendTemplateEmail('AdvancePaymentTemplate', emailData);
 
-      // Optionally, update order status to indicate payment pending
-      await OrderTableModel.update(
+      // Update order status to indicate payment pending
+      await OrderTabelModel.update(
           { StatusID: 9 }, // New status for "Awaiting Advance Payment"
-          { where: { OrderID } }
+          { where: { OrderID: parseInt(OrderID, 10) } }
       );
 
-      return true;
+      return { success: true, message: 'Advance payment email triggered successfully.' };
   } catch (error) {
-      console.error('Error triggering advance payment email:', error);
-      // Optionally log to a logging service
+      console.error('Error triggering advance payment email:', error.message);
       throw error; // Re-throw to allow caller to handle
   }
 };

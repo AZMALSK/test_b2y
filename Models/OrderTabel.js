@@ -34,6 +34,22 @@ module.exports=(sequelize)=>{
         Comments:DataTypes.STRING,
         ReferedBy:DataTypes.STRING,
         DesginerName:DataTypes.STRING,
+        ProjectTypeID: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            references: {
+                model: 'ProjectType', // Table name
+                key: 'ProjectTypeID', // Primary key in the ProjectType table
+            },
+        },
+        ReferredByID: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            references: {
+                model: 'Reference', // Table name
+                key: 'id', // Primary key in the Reference table
+            },
+        },
         StatusDeliveryDate:{
             type: DataTypes.DATE,
             defaultValue: DataTypes.NOW

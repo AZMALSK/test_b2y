@@ -83,28 +83,56 @@ const replacePlaceholders = (template, data) => {
 // };
 
 // Global function to send email using a template
+// const sendTemplateEmail = async (templateName, data) => {
+//   try {
+//     const template = await getEmailTemplate(templateName);
+
+//     // Replace placeholders and inject CSS into the email template
+//     const { subject, body } = replacePlaceholders(template, data);
+
+//     // Define email options
+//     const mailOptions = {
+//       from: '"Imly Studio"  <vinay.g@b2yinfy.com>',
+//       to: data.customerEmail,
+//       subject: subject,
+//       html: body,
+//     };
+
+//     // Send email using the globally configured transporter
+//     let info = await transporter.sendMail(mailOptions);
+//     console.log('Email sent:', info.messageId);
+//   } catch (error) {
+//     console.error('Error sending email:', error);
+//   }
+// };
+
+
+// module.exports = { sendTemplateEmail };
+
+
 const sendTemplateEmail = async (templateName, data) => {
   try {
     const template = await getEmailTemplate(templateName);
-
-    // Replace placeholders and inject CSS into the email template
+    
+    // Replace placeholders and inject CSS
     const { subject, body } = replacePlaceholders(template, data);
-
-    // Define email options
+    
+    // Define email options with Gmail address
     const mailOptions = {
-      from: '"Imly Studio"  <vinay.g@b2yinfy.com>',
+      from: `"Imly Studios" <${process.env.EMAIL_USERNAME}>`, // Update with your name
       to: data.customerEmail,
       subject: subject,
       html: body,
     };
-
-    // Send email using the globally configured transporter
+    
+    // Send email using the Gmail transporter
     let info = await transporter.sendMail(mailOptions);
     console.log('Email sent:', info.messageId);
+    return info;
   } catch (error) {
     console.error('Error sending email:', error);
+    throw error;
   }
 };
-
 
 module.exports = { sendTemplateEmail };

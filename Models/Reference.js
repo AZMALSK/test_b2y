@@ -34,15 +34,3 @@ module.exports = (sequelize) => {
     
 };
 
-// IMPORTANT: Add this associate method
-// Reference.associate = (models) => {
-//     Reference.belongsTo(Reference, {
-//         foreignKey: 'parentId',
-//         as: 'parent'
-//     });
-
-//     Reference.hasMany(Reference, {
-//         foreignKey: 'parentId',
-//         as: 'children'
-//     });
-// };

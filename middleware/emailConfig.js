@@ -1,51 +1,99 @@
+// const nodemailer = require('nodemailer');
+// require('dotenv').config();
+
+// const transporter = nodemailer.createTransport({
+//   host: process.env.SMTP_HOST,
+//   port: process.env.SMTP_PORT,
+//   secure: true,
+//   auth: {
+//     user: process.env.EMAIL_USERNAME,
+//     pass: process.env.EMAIL_PASSWORD,
+//   },
+//   tls: {
+//     rejectUnauthorized: false,
+//     minVersion: "TLSv1.2",
+//   },
+//   debug: true,
+//   logger: true,
+// });
+
+// // Function to send an email
+// const sendEmail = async () => {
+//   try {
+//     const info = await transporter.sendMail({
+//       from: '"Gaddamvinay" <vinay.g@b2yinfy.com>', // Sender address
+//       to: 'gaddamvinay450@gmail.com', // List of recipients
+//       subject: 'Test Email', // Subject line
+//       text: 'Hello, this is a test email from Nodemailer!', // Plain text body
+//       html: '<b>Hello, this is a test email from Nodemailer!</b>', // HTML body
+//     });
+
+//     console.log('Message sent: %s', info.messageId);
+//   } catch (error) {
+//     console.error('Error sending email:', error);
+//   }
+// };
+
+// // Verify connection and send a test email
+// transporter.verify((error, success) => {
+//   if (error) {
+//     console.error('SMTP Connection Error:', error);
+//   } else {
+//     console.log('SMTP Server is ready to take our messages');
+//     sendEmail();
+//   }
+// });
+
+// module.exports = transporter;
+
+
+
+
+// // zqfn jntz ljui jawf
+
+// // fdla nymb qtwb npqr
+
+
 const nodemailer = require('nodemailer');
 require('dotenv').config();
 
+// Create reusable transporter object using Gmail SMTP
 const transporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST,
-  port: process.env.SMTP_PORT,
+  service: 'gmail',  // Using Gmail service
+  host: 'smtp.gmail.com',
+  port: 465,
   secure: true,
   auth: {
-    user: process.env.EMAIL_USERNAME,
-    pass: process.env.EMAIL_PASSWORD,
-  },
-  tls: {
-    rejectUnauthorized: false,
-    minVersion: "TLSv1.2",
-  },
-  debug: true,
-  logger: true,
+    user: process.env.EMAIL_USERNAME, // Your Gmail address
+    pass: process.env.EMAIL_PASSWORD  // Your App Password
+  }
 });
 
 // Function to send an email
-const sendEmail = async () => {
-  try {
-    const info = await transporter.sendMail({
-      from: '"Gaddamvinay" <vinay.g@b2yinfy.com>', // Sender address
-      to: 'gaddamvinay450@gmail.com', // List of recipients
-      subject: 'Test Email', // Subject line
-      text: 'Hello, this is a test email from Nodemailer!', // Plain text body
-      html: '<b>Hello, this is a test email from Nodemailer!</b>', // HTML body
-    });
+// const sendEmail = async () => {
+//   try {
+//     const info = await transporter.sendMail({
+//       from: `"Your Name" <${process.env.EMAIL_USERNAME}>`, // Your Gmail address
+//       to: 'gaddamvinay450@gmail.com',
+//       subject: 'Test Email',
+//       text: 'Hello, this is a test email from Gmail!',
+//       html: '<b>Hello, this is a test email from Gmail!</b>',
+//     });
+    
+//     console.log('Message sent: %s', info.messageId);
+//   } catch (error) {
+//     console.error('Error sending email:', error);
+//   }
+// };
 
-    console.log('Message sent: %s', info.messageId);
-  } catch (error) {
-    console.error('Error sending email:', error);
-  }
-};
-
-// Verify connection and send a test email
-transporter.verify((error, success) => {
-  if (error) {
-    console.error('SMTP Connection Error:', error);
-  } else {
-    console.log('SMTP Server is ready to take our messages');
-    sendEmail();
-  }
-});
+// // Verify connection
+// transporter.verify((error, success) => {
+//   if (error) {
+//     console.error('SMTP Connection Error:', error);
+//   } else {
+//     console.log('SMTP Server is ready to take our messages');
+//     sendEmail();
+//   }
+// });
 
 module.exports = transporter;
-
-
-
-

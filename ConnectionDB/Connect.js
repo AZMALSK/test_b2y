@@ -176,6 +176,10 @@ FeedbackModel.belongsTo(OrderTabelModel, {foreignKey: 'OrderID',as: 'OrdersTable
 UserManagementModel.belongsTo(RoleModel, { foreignKey: 'RoleID', as: 'UserRole' });
 RoleModel.hasMany(UserManagementModel, { foreignKey: 'RoleID' });
 
+// OrderTabel to ProjectType And Reference 
+OrderTabelModel.belongsTo(ProjectTypeModel, {foreignKey: 'ProjectTypeID', as: 'ProjectType',});
+OrderTabelModel.belongsTo(ReferenceModel, {foreignKey: 'ReferredByID', as: 'ReferredBy',});
+
 
 
 // ReferenceModel associations
