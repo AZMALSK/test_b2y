@@ -156,6 +156,9 @@ router.get('/children', referenceController.getAllChildReferences);
 router.get('/reference/:id', referenceController.getReferenceById);
 router.put('/reference/:id', referenceController.updateReference);
 router.delete('/reference/:id', referenceController.deleteReference);
+router.get('/getAllData', referenceController.getAllData); // Get all data updated one
+router.get('/getByIdReferences/:id', referenceController.getById); // Get by ID updated one
+
 
 
 

@@ -49,7 +49,66 @@ exports.createReference = async (req, res) => {
     }
 };
 
-// Get all references with their sub-references
+exports.getAllData = async (req, res) => {
+    try {
+        const allData = await ReferenceModel.findAll({
+            attributes: ['id', 'name', 'parentId', 'isActive'], 
+        });
+
+        return res.status(200).json({
+            success: true,
+            data: allData,
+        });
+    } catch (error) {
+        return res.status(500).json({
+            success: false,
+            message: error.message,
+        });
+    }
+};
+exports.getById = async (req, res) => {
+    try {
+        const { id } = req.params; // Get `id` from route parameters
+
+        // Find the reference by ID
+        const reference = await ReferenceModel.findByPk(id, {
+            attributes: ['id', 'name', 'parentId', 'isActive'], 
+        });
+
+        if (!reference) {
+            return res.status(404).json({
+                success: false,
+                message: 'Reference not found',
+            });
+        }
+
+        // If the record has a parentId, fetch the parent record
+        let parentReference = null;
+        if (reference.parentId) {
+            parentReference = await ReferenceModel.findByPk(reference.parentId, {
+                attributes: ['id', 'name', 'parentId', 'isActive'], 
+            });
+        }
+
+        // Build the flat list response
+        const responseData = parentReference
+            ? [reference, parentReference] // Include parent if it exists
+            : [reference]; // Only the record itself
+
+        return res.status(200).json({
+            success: true,
+            data: responseData,
+        });
+    } catch (error) {
+        return res.status(500).json({
+            success: false,
+            message: error.message,
+        });
+    }
+};
+
+
+// Get all references
 exports.getAllParentReferences = async (req, res) => {
     try {
         const parentReferences = await ReferenceModel.findAll({

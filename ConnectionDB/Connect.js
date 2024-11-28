@@ -178,13 +178,7 @@ RoleModel.hasMany(UserManagementModel, { foreignKey: 'RoleID' });
 
 
 
-  // ReferenceModel associations
-// Setup associations
-// Object.keys(sequelize.models).forEach(ReferenceModel => {
-//   if (sequelize.models[ReferenceModel].associate) {
-//       sequelize.models[ReferenceModel].associate(sequelize.models);
-//   }
-// });
+// ReferenceModel associations
 ReferenceModel.belongsTo(ReferenceModel, {
   foreignKey: 'parentId',
   as: 'parent',
