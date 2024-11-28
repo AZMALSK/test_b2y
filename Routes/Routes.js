@@ -150,14 +150,13 @@ router.delete('/deleteProjectType/:ProjectTypeID',ProjectTypeController.deletePr
 
 
 // Reference routes
-router.post('/reference', referenceController.createReference);
-router.post('/sub-reference', referenceController.createSubReference);
-router.get('/references', referenceController.getAllReferences);
+router.post('/createParentOrChindreference', referenceController.createReference);
+router.get('/parents', referenceController.getAllParentReferences);
+router.get('/children', referenceController.getAllChildReferences);
 router.get('/reference/:id', referenceController.getReferenceById);
 router.put('/reference/:id', referenceController.updateReference);
 router.delete('/reference/:id', referenceController.deleteReference);
-router.post('/reference/bulk-delete', referenceController.bulkDeleteReferences);
-router.patch('/reference/:id/status', referenceController.changeReferenceStatus);
+
 
 
 module.exports = router;

@@ -186,14 +186,15 @@ RoleModel.hasMany(UserManagementModel, { foreignKey: 'RoleID' });
 //   }
 // });
 ReferenceModel.belongsTo(ReferenceModel, {
-          foreignKey: 'parentId',
-          as: 'parent'
-      });
-  
-      ReferenceModel.hasMany(ReferenceModel, {
-          foreignKey: 'parentId',
-          as: 'children'
-      });
+  foreignKey: 'parentId',
+  as: 'parent',
+});
+
+ReferenceModel.hasMany(ReferenceModel, {
+  foreignKey: 'parentId',
+  as: 'children',
+});
+
 
 // Test the connection
 sequelize.authenticate()
