@@ -135,4 +135,29 @@ const sendTemplateEmail = async (templateName, data) => {
   }
 };
 
-module.exports = { sendTemplateEmail };
+const sendTemplateEmailForUser = async (templateName, data) => {
+  try {
+    const template = await getEmailTemplate(templateName);
+    
+    // Replace placeholders and inject CSS
+    const { subject, body } = replacePlaceholders(template, data);
+    
+    // Define email options with Gmail address
+    const mailOptions = {
+      from: `"Imly Studios" <${process.env.EMAIL_USERNAME}>`, // Update with your name
+      to: data.assignedUserEmail,
+      subject: subject,
+      html: body,
+    };
+    
+    // Send email using the Gmail transporter
+    let info = await transporter.sendMail(mailOptions);
+    console.log('Email sent:', info.messageId);
+    return info;
+  } catch (error) {
+    console.error('Error sending email:', error);
+    throw error;
+  }
+};
+
+module.exports = { sendTemplateEmail ,sendTemplateEmailForUser};
