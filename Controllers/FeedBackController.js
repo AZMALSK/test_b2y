@@ -149,7 +149,7 @@ exports.GetAllFeedBacks = async (req, res) => {
                 {
                     model: OrderTabelModel,
                     as: 'OrdersTable',
-                    attributes: ['OrderNumber']
+                    attributes: ['OrderNumber','Type']
                 }
             ],
             order: [
@@ -168,6 +168,7 @@ exports.GetAllFeedBacks = async (req, res) => {
             ItemName: feedback.ItemName,
             DeliveryDate: feedback.DeliveryDate,
             OrderNumber: feedback.OrdersTable?.OrderNumber || null,
+            ProjectType:feedback.OrdersTable?.Type || null,
             ReceivedDocuments: feedback.ReceivedDocuments,
             ReceivedWarrantyCard: feedback.ReceivedWarrantyCard,
             InstallationSuccessful: feedback.InstallationSuccessful,
