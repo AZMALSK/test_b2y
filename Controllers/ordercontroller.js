@@ -1054,7 +1054,7 @@ async function triggerPaymentEmail(OrderID) {
 
         const order = await OrderTabelModel.findOne({ where: { OrderID } });
         const customer = await CustomerModel.findOne({ where: { CustomerID: order.CustomerID } });
-
+                       
         const payments = await Payment.findAll({ where: { OrderID } });
         const totalAdvanceAmount = payments.reduce((sum, payment) => sum + parseFloat(payment.Amount), 0);
         const totalAmount = parseFloat(order.TotalAmount);
@@ -1167,49 +1167,46 @@ async function triggerPaymentEmail(OrderID) {
 //   }
 // };
 
-exports.triggerAdvanceMeasurementPaymentEmail = async (req) => {
+exports.triggerAdvanceMeasurementPaymentEmail = async (req, res) => {
   try {
-      // Get OrderID from request (either query or body)
+      // Get OrderID from request
       const OrderID = req.query.OrderID || req.body.OrderID;
 
       if (!OrderID || isNaN(OrderID)) {
-          throw new Error('Invalid or missing OrderID.');
+          return res.status(400).json({ success: false, message: 'Invalid or missing OrderID.' });
       }
 
-      // Fetch the order history with the desired status
-      const orderMeasurement = await OrderHistory.findOne({
-          where: { 
-              OrderID: parseInt(OrderID, 10), 
-              StatusID: 5 // Assuming 5 represents "Final Measurements Approved"
-          }
-      });
 
-      if (!orderMeasurement) {
-          throw new Error('No order found with final measurements approved.');
-      }
-
-      // Fetch the full order details
+      // Fetch the full order details including customer info
       const order = await OrderTabelModel.findOne({
           where: { OrderID: parseInt(OrderID, 10) },
           include: [
-              { 
+              {
                   model: CustomerModel, as: 'Customer',
-                  attributes: ['CustomerID', 'FirstName', 'Email']
+                  attributes: ['FirstName', 'Email']
               },
               {
-                  model: StoreModel,as: 'StoreTabel',
-                  attributes: ['StoreID', 'StoreName']
+                  model: StoreModel, as: 'StoreTabel',
+                  attributes: ['StoreName']
               }
           ]
       });
 
       if (!order) {
-          throw new Error('Order not found.');
+          return res.status(404).json({ success: false, message: 'Order not found.' });
       }
 
-      // Calculate 30% advance amount
+      if (!order.Customer || !order.Customer.Email) {
+          return res.status(404).json({ success: false, message: 'Customer email not found for this order.' });
+      }
+
+
+      // Calculate 30% of the total amount
       const totalAmount = parseFloat(order.TotalAmount);
-      const advanceAmount = totalAmount * 0.30; // 30% of total amount
+      if (isNaN(totalAmount) || totalAmount <= 0) {
+          return res.status(400).json({ success: false, message: 'Invalid total amount for the order.' });
+      }
+      const advanceAmount = totalAmount * 0.30;
 
       // Prepare email data
       const emailData = {
@@ -1220,34 +1217,31 @@ exports.triggerAdvanceMeasurementPaymentEmail = async (req) => {
           Type: order.Type,
           TotalAmount: totalAmount.toFixed(2),
           AdvanceAmount: advanceAmount.toFixed(2),
-          StoreName: order.StoreName,
+          StoreName: order.StoreTabel?.StoreName || 'Unknown Store',
           PaymentInstructions: 'Please pay 30% advance amount to start production.',
-          // PaymentDueDate: calculateDueDate() // Implement this function to calculate due date
+          PaymentDueDate: calculateDueDate()
       };
 
-      // Create a payment record for the advance payment
-      await Payment.create({
-          OrderID: parseInt(OrderID, 10),
-          TenantID:1,
-          CustomerID:order.Customer.CustomerID,
-          Amount: advanceAmount,
-          PaymentType: 'Advance',
-          StatusID: 1, // Pending payment status
-          CreatedAt: new Date()
-      });
 
-      // Send email template for advance payment
-      await sendTemplateEmail('AdvancePaymentTemplate', emailData);
+      // Send email
+      try {
+          await sendTemplateEmail('AdvancePaymentTemplate', emailData);
+      } catch (emailError) {
+          return res.status(500).json({ success: false, message: 'Failed to send email.', error: emailError.message });
+      }
 
-      // Update order status to indicate payment pending
-      await OrderTabelModel.update(
-          { StatusID: 9 }, // New status for "Awaiting Advance Payment"
-          { where: { OrderID: parseInt(OrderID, 10) } }
-      );
-
-      return { success: true, message: 'Advance payment email triggered successfully.' };
+      // Send response back to the client
+      return res.status(200).json({ success: true, message: 'Advance payment email triggered successfully.' });
   } catch (error) {
       console.error('Error triggering advance payment email:', error.message);
-      throw error; // Re-throw to allow caller to handle
+      return res.status(500).json({ success: false, message: 'An error occurred.', error: error.message });
   }
 };
+
+// Helper function to calculate the due date
+function calculateDueDate() {
+  const dueDate = new Date();
+  dueDate.setDate(dueDate.getDate() + 7);
+  return dueDate.toISOString().split('T')[0];
+}
+
