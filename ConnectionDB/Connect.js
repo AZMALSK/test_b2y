@@ -183,14 +183,16 @@ OrderTabelModel.belongsTo(ReferenceModel, {foreignKey: 'ReferredByID', as: 'Refe
 
 
 // ReferenceModel associations
+// A child record belongs to one parent
 ReferenceModel.belongsTo(ReferenceModel, {
   foreignKey: 'parentId',
-  as: 'parent',
+  as: 'parent', // Alias for the parent
 });
 
+// A parent record can have many children
 ReferenceModel.hasMany(ReferenceModel, {
   foreignKey: 'parentId',
-  as: 'children',
+  as: 'children', // Alias for the children
 });
 
 

@@ -1,7 +1,7 @@
 const { sequelize,ReferenceModel} = require('../ConnectionDB/Connect');
 const { Op } = require('sequelize');
 
-
+//createparentorchind reference
 exports.createReference = async (req, res) => {
     try {
         const { name, parentId, isActive } = req.body;
@@ -48,138 +48,6 @@ exports.createReference = async (req, res) => {
         });
     }
 };
-
-exports.getAllData = async (req, res) => {
-    try {
-        const allData = await ReferenceModel.findAll({
-            attributes: ['id', 'name', 'parentId', 'isActive'], 
-        });
-
-        return res.status(200).json({
-            success: true,
-            data: allData,
-        });
-    } catch (error) {
-        return res.status(500).json({
-            success: false,
-            message: error.message,
-        });
-    }
-};
-exports.getById = async (req, res) => {
-    try {
-        const { id } = req.params; // Get `id` from route parameters
-
-        // Find the reference by ID
-        const reference = await ReferenceModel.findByPk(id, {
-            attributes: ['id', 'name', 'parentId', 'isActive'], 
-        });
-
-        if (!reference) {
-            return res.status(404).json({
-                success: false,
-                message: 'Reference not found',
-            });
-        }
-
-        // If the record has a parentId, fetch the parent record
-        let parentReference = null;
-        if (reference.parentId) {
-            parentReference = await ReferenceModel.findByPk(reference.parentId, {
-                attributes: ['id', 'name', 'parentId', 'isActive'], 
-            });
-        }
-
-        // Build the flat list response
-        const responseData = parentReference
-            ? [reference, parentReference] // Include parent if it exists
-            : [reference]; // Only the record itself
-
-        return res.status(200).json({
-            success: true,
-            data: responseData,
-        });
-    } catch (error) {
-        return res.status(500).json({
-            success: false,
-            message: error.message,
-        });
-    }
-};
-
-
-// Get all references
-exports.getAllParentReferences = async (req, res) => {
-    try {
-        const parentReferences = await ReferenceModel.findAll({
-            where: { parentId: null },
-            // include: [{ model: ReferenceModel, as: 'children' }], // Optionally include child references
-        });
-
-        return res.status(200).json({
-            success: true,
-            data: parentReferences,
-        });
-    } catch (error) {
-        return res.status(500).json({
-            success: false,
-            message: error.message,
-        });
-    }
-};
-
-exports.getAllChildReferences = async (req, res) => {
-    try {
-        const childReferences = await ReferenceModel.findAll({
-            where: { parentId: { [Op.not]: null } }, // Sequelize operator for "not null"
-            // include: [{ model: ReferenceModel, as: 'parent' }], // Optionally include parent reference
-        });
-
-        return res.status(200).json({
-            success: true,
-            data: childReferences,
-        });
-    } catch (error) {
-        return res.status(500).json({
-            success: false,
-            message: error.message,
-        });
-    }
-};
-
-// Get Reference by ID
-exports.getReferenceById = async (req, res) => {
-    try {
-        const { id } = req.params;
-
-        const reference = await ReferenceModel.findOne({
-            where: { id },
-            include: [{
-                model: ReferenceModel,
-                as: 'children'
-                
-            }]
-        });
-
-        if (!reference) {
-            return res.status(404).json({
-                success: false,
-                message: 'Reference not found'
-            });
-        }
-
-        return res.status(200).json({
-            success: true,
-            data: reference
-        });
-    } catch (error) {
-        return res.status(500).json({
-            success: false,
-            message: error.message
-        });
-    }
-};
-
 // Update Reference
 exports.updateReference = async (req, res) => {
     try {
@@ -220,8 +88,6 @@ exports.updateReference = async (req, res) => {
         });
     }
 };
-
-
 // Delete Reference
 exports.deleteReference = async (req, res) => {
     try {
@@ -261,7 +127,157 @@ exports.deleteReference = async (req, res) => {
         });
     }
 };
+//getall data with parentname
+exports.getAllData = async (req, res) => {
+    try {
+        const allData = await ReferenceModel.findAll({
+            attributes: ['id', 'name', 'parentId', 'isActive'], 
+            include: [
+                {
+                    model: ReferenceModel,
+                    as: 'parent', // Match the alias defined in the association
+                    attributes: ['name'], // Only fetch the parent's name
+                },
+            ],
+        });
 
+        // Transform the data to include parentName
+        const transformedData = allData.map(item => ({
+            id: item.id,
+            name: item.name,
+            parentId: item.parentId,
+            isActive: item.isActive,
+            parentName: item.parent ? item.parent.name : null, // Add parentName if parent exists
+        }));
 
+        return res.status(200).json({
+            success: true,
+            data: transformedData,
+        });
+    } catch (error) {
+        console.error('Error fetching all data:', error);
+        return res.status(500).json({
+            success: false,
+            message: error.message,
+        });
+    }
+};
+// Get chindrenReference by parentID
+exports.getChildrenByParentId = async (req, res) => {
+    const { parentId } = req.params;
 
+    try {
+        // Fetch child records based on parentId
+        const childData = await ReferenceModel.findAll({
+            where: {
+                parentId: parentId,
+            },
+            attributes: ['id', 'name', 'parentId', 'isActive'],
+            include: [
+                {
+                    model: ReferenceModel,
+                    as: 'parent', // Match the alias defined in the association
+                    attributes: ['name'], // Fetch only the parent's name
+                },
+            ],
+        });
 
+        // Transform the data to include parentName
+        const transformedData = childData.map(item => ({
+            id: item.id,
+            name: item.name,
+            parentId: item.parentId,
+            isActive: item.isActive,
+            parentName: item.parent ? item.parent.name : null, // Add parentName
+        }));
+
+        return res.status(200).json({
+            success: true,
+            data: transformedData,
+        });
+    } catch (error) {
+        console.error('Error fetching children by parentId:', error);
+        return res.status(500).json({
+            success: false,
+            message: error.message,
+        });
+    }
+};
+
+exports.getById = async (req, res) => {
+    try {
+        const { id } = req.params; 
+        // Find the reference by ID
+        const reference = await ReferenceModel.findByPk(id, {
+            attributes: ['id', 'name', 'parentId', 'isActive'], 
+        });
+
+        if (!reference) {
+            return res.status(404).json({
+                success: false,
+                message: 'Reference not found',
+            });
+        }
+
+        // If the record has a parentId, fetch the parent record
+        let parentReference = null;
+        if (reference.parentId) {
+            parentReference = await ReferenceModel.findByPk(reference.parentId, {
+                attributes: ['id', 'name', 'parentId', 'isActive'], 
+            });
+        }
+
+        // Build the flat list response
+        const responseData = parentReference
+            ? [reference, parentReference] // Include parent if it exists
+            : [reference]; // Only the record itself
+
+        return res.status(200).json({
+            success: true,
+            data: responseData,
+        });
+    } catch (error) {
+        return res.status(500).json({
+            success: false,
+            message: error.message,
+        });
+    }
+};
+// Get all parentreferences
+exports.getAllParentReferences = async (req, res) => {
+    try {
+        const parentReferences = await ReferenceModel.findAll({
+            where: { parentId: null },
+            // include: [{ model: ReferenceModel, as: 'children' }], // Optionally include child references
+        });
+
+        return res.status(200).json({
+            success: true,
+            data: parentReferences,
+        });
+    } catch (error) {
+        return res.status(500).json({
+            success: false,
+            message: error.message,
+        });
+    }
+};
+// Get all childreferences
+exports.getAllChildReferences = async (req, res) => {
+    try {
+        const childReferences = await ReferenceModel.findAll({
+            where: { parentId: { [Op.not]: null } }, // Sequelize operator for "not null"
+            // include: [{ model: ReferenceModel, as: 'parent' }], // Optionally include parent reference
+        });
+
+        return res.status(200).json({
+            success: true,
+            data: childReferences,
+        });
+    } catch (error) {
+        return res.status(500).json({
+            success: false,
+            message: error.message,
+        });
+    }
+};
