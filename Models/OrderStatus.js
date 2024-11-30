@@ -19,6 +19,10 @@ module.exports = (sequelize) => {
             type:DataTypes.INTEGER,
             allowNull: false
         },
+        HexColorCode:{
+            type: DataTypes.STRING,
+            allowNull: true
+        },
         CreatedBy: {
             type: DataTypes.STRING(255),
             allowNull: true

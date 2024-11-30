@@ -1,10 +1,10 @@
-const {OrderHistory ,OrderTabelModel,OrderStatusModel,CustomerModel,UserManagementModel, Payment, RoleModel,StoreModel} = require('../ConnectionDB/Connect');
+const {OrderHistory ,OrderTabelModel,OrderStatusModel,CustomerModel,UserManagementModel, Payment, RoleModel,StoreModel,AddressModel,CityModel,StateModel,CountryModel} = require('../ConnectionDB/Connect');
 const { Op } = require('sequelize');
 const { Sequelize, DataTypes } = require('sequelize');
 // const { upload } = require('../middleware/Cloundinary');
 const { storage } = require('../middleware/Cloundinary');
 const supabase = require('../middleware/supabase');
-const { sendTemplateEmail } = require('../middleware/SendEmail'); // Your existing email service
+const { sendTemplateEmail,sendTemplateEmailForUser } = require('../middleware/SendEmail'); // Your existing email service
 const multer = require('multer');
 const moment = require('moment');
 const path = require('path');
@@ -180,6 +180,144 @@ const uploadFileToSupabase = async (file) => {
     return { publicUrl, downloadUrl, originalFileName: file.originalname };
 };
 
+async function sendAssignmentNotification(OrderID, StatusID) {
+    try {
+        // Get order details with all necessary associations
+        const order = await OrderTabelModel.findOne({
+            where: { OrderID },
+            include: [
+                {
+                    model: CustomerModel,
+                    as : 'Customer',
+                    attributes: ['FirstName', 'Email', 'PhoneNumber']
+                },
+                {
+                    model: StoreModel,
+                    as: 'StoreTabel',
+                    attributes: ['StoreName']
+                },
+                {
+                    model: AddressModel,
+                    as: 'Address',
+                    include: [
+                        { model: CityModel, as: 'City' },
+                        { model: StateModel, as: 'State' },
+                        { model: CountryModel, as: 'Country' }
+                    ]
+                }
+            ]
+        });
+
+        if (!order) {
+            throw new Error('Order not found');
+        }
+
+        // Get the latest order history entry with assigned user and status info
+        const orderHistory = await OrderHistory.findOne({
+            where: { OrderID, StatusID },
+            order: [['CreatedAt', 'DESC']],
+            include: [
+                {
+                    model: UserManagementModel,
+                    as: 'AssignedUser',
+                    attributes: ['FirstName', 'LastName', 'Email', 'PhoneNumber']
+                },
+                {
+                    model: OrderStatusModel,
+                    attributes: ['OrderStatus']
+                }
+            ]
+        });
+
+        if (!orderHistory?.AssignedUser) {
+            throw new Error('Assigned user not found');
+        }
+
+        // Format the address
+        const address = order.Address;
+        const formattedAddress = `${address.AddressLine1}${address.AddressLine2 ? '\n' + address.AddressLine2 : ''}
+            ${address.City ? address.City.CityName : ''}, 
+            ${address.State ? address.State.StateName : ''} ${address.ZipCode}
+            ${address.Country ? address.Country.CountryName : ''}`;
+
+        // Handle document URLs if present
+        let documentUrls = [];
+        let downloadUrls = [];
+        if (orderHistory.DocumentName) {
+            documentUrls = orderHistory.DocumentName.split(', ');
+            downloadUrls = documentUrls.map(url => url.replace('/upload/', '/upload/fl_attachment/'));
+        }
+
+        // Format dates consistently
+        const formatDate = (date) => {
+            if (!date) return 'TBD';
+            return new Date(date).toLocaleDateString('en-GB', {
+                day: 'numeric',
+                month: 'long',
+                year: 'numeric'
+            });
+        };
+
+        // Prepare email data
+        const emailData = {
+            // Order Details
+            OrderNumber: order.OrderNumber,
+            OrderID: order.OrderID,
+            Type: order.Type,
+            OrderStatus: orderHistory.OrderStatus.OrderStatus, // Get status from OrderStatus model
+            OrderDate: formatDate(order.CreatedAt),
+            DeliveryDate: formatDate(order.DeliveryDate),
+            TotalAmount: new Intl.NumberFormat('en-IN', {
+                style: 'currency',
+                currency: 'INR',
+                minimumFractionDigits: 2,
+            }).format(order.TotalAmount).replace('₹', ''),
+            
+            // Customer Details
+            customerFirstName: order.Customer.FirstName,
+            customerEmail: order.Customer.Email,
+            customerPhone: order.Customer.PhoneNumber,
+            
+            // Store Details
+            StoreName: order.StoreTabel.StoreName,
+            
+            // Address Details
+            DeliveryAddress: formattedAddress,
+            AddressLine1: address.AddressLine1,
+            AddressLine2: address.AddressLine2,
+            City: address.City?.CityName,
+            State: address.State?.StateName,
+            ZipCode: address.ZipCode,
+            Country: address.Country?.CountryName,
+            
+            // Assigned User Details
+            assignedUserName: `${orderHistory.AssignedUser.FirstName} ${orderHistory.AssignedUser.LastName}`,
+            assignedUserEmail: orderHistory.AssignedUser.Email,
+            assignedUserPhone: orderHistory.AssignedUser.PhoneNumber,
+            
+            // Status-specific Details
+            Comments: orderHistory.Comments || '',
+            DocumentName: documentUrls.length > 0 ? documentUrls.join(', ') : 'No Document',
+            DocumentUrl: documentUrls.length > 0 ? documentUrls[0] : '',
+            DownloadDocuments: downloadUrls.length > 0 ? downloadUrls.join(', ') : '',
+            SubStatusId: order.SubStatusId
+        };
+
+        // Use a consistent template name for all status updates
+        const templateName = 'OrderStatusForUser'; // This should match your template name in the database
+
+        // Send email to assigned user using the template
+        await sendTemplateEmailForUser(templateName, emailData);
+
+        console.log(`Assignment notification sent for Order ${OrderID} to ${emailData.assignedUserEmail} with status ${emailData.OrderStatus}`);
+        return true;
+
+    } catch (error) {
+        console.error('Error sending assignment notification:', error);
+        throw error;
+    }
+}
+
 exports.createOrUpdateOrderHistory = async (req, res) => {
     upload(req, res, async function (err) {
         if (err instanceof multer.MulterError) {
@@ -328,6 +466,10 @@ if (!OrderHistoryID || OrderHistoryID == 0) {
                 });
             }
 
+                // After successful order history creation/update, send notification
+                if (AssignTo) {  // Only send notification if there's an assigned user
+                await sendAssignmentNotification(OrderID, StatusID);
+            }
             // Update order table with new status and sub-status
             await OrderTabelModel.update({ 
                 OrderStatus, 
@@ -819,94 +961,6 @@ exports.getusertasks = async (req, res) => {
 };
 
 
-// exports.getusertasks = async (req, res) => {
-//     const { UserID, StoreID, searchText } = req.query;
-
-//     // Validate UserID
-//     if (!UserID) {
-//         return res.status(400).json({ error: 'UserID is required' });
-//     }
-
-//     try {
-//         // Initialize the where clause with AssignTo condition
-//         let whereClause = { AssignTo: UserID };
-
-//         // Add StoreID condition if provided
-//         if (StoreID) {
-//             whereClause.StoreID = StoreID;
-//         }
-
-//         // If searchText is provided, apply the search logic to OrderNumber and AssignTo's FirstName and LastName
-//         if (searchText) {
-//             whereClause = {
-//                 ...whereClause,
-//                 [Op.or]: [
-//                     { '$OrderTabelModel.OrderNumber$': { [Op.iLike]: `%${searchText}%` } },
-//                     { '$OrderTabelModel.AssignTo.FirstName$': { [Op.iLike]: `%${searchText}%` } }, 
-//                     { '$OrderTabelModel.AssignTo.LastName$': { [Op.iLike]: `%${searchText}%` } }
-//                 ]
-//             };
-//         }
-
-//         // Fetch tasks with the required associations and search criteria
-//         const tasks = await OrderHistory.findAll({
-//             where: whereClause,
-//             include: [
-//                 {
-//                     model: OrderTabelModel, // Include the Order Table to access OrderNumber and StoreID
-//                     attributes: ['OrderNumber', 'StoreID'],
-//                     include: [{
-//                         model: UserManagementModel, // Include the User model within the OrderTabelModel to fetch AssignTo details
-//                         as: 'User', // Ensure the alias matches the foreign key relationship
-//                         attributes: ['FirstName', 'LastName'] // Fetch FirstName and LastName from UserModel
-//                     }],
-//                     where: StoreID ? { StoreID: StoreID } : {} // Add StoreID filter if provided
-//                 }
-//             ],
-//             attributes: [
-//                 'OrderHistory.OrderID',
-//                 [Sequelize.fn('MIN', Sequelize.col('OrderHistory.CreatedAt')), 'StartDate'],
-//                 [Sequelize.fn('MAX', Sequelize.col('OrderHistory.EndDate')), 'EndDate'],
-//                 'OrderHistoryStatus',
-//                 'Comments'
-//             ],
-//             group: [
-//                 'OrderHistory.OrderID', 
-//                 'OrderHistoryStatus', 
-//                 'OrderHistory.Comments', 
-//                 'OrderTabelModel.OrderNumber', 
-//                 'OrderTabelModel.StoreID', 
-//                 'OrderTabelModel.AssignTo.FirstName', 
-//                 'OrderTabelModel.AssignTo.LastName'
-//             ],
-//             raw: true
-//         });
-
-//         // Check if tasks were found
-//         if (tasks.length === 0) {
-//             return res.status(200).json({ 
-//                 message: StoreID 
-//                     ? 'No tasks found for the provided UserID and StoreID.' 
-//                     : 'No tasks found for the provided UserID.'
-//             });
-//         }
-
-//         // Return tasks
-//         res.json({
-//             StatusCode: 'SUCCESS',
-//             totalRecords: tasks.length,
-//             tasks: tasks
-//         });
-//     } catch (error) {
-//         console.error('Error fetching user tasks:', error);
-//         res.status(500).json({ 
-//             StatusCode: 'ERROR',
-//             error: 'Internal server error' 
-//         });
-//     }
-// };
-
-
 exports.checkStatusAndSendEmail = async (req, res) => {
     const { OrderID } = req.body; // Extract OrderID from request body
 
@@ -1046,73 +1100,6 @@ exports.updateFinalMeasurementStatus = async (req, res) => {
         return res.status(500).json({ message: 'Internal server error' });
     }
 };
-// exports.updateFinalMeasurementStatus = async (req, res) => {
-//     const { OrderID, FinalMeasurementStatus } = req.body;
-
-//     try {
-//         // Fetch all records from OrderHistory for the given OrderID
-//         const orderHistories = await OrderHistory.findAll({ 
-//             where: { OrderID } 
-//         });
-
-//         if (!orderHistories || orderHistories.length === 0) {
-//             return res.status(200).json({ message: 'Order history not found for the given Order ID.' });
-//         }
-
-//         // Find the record with StatusID = 5 (FinalMeasurement record)
-//         const finalMeasurementRecord = orderHistories.find(order => order.StatusID === 5);
-
-//         if (!finalMeasurementRecord) {
-//             return res.status(200).json({ message: 'No record with FinalMeasurement status (StatusID = 5) found for the given Order ID.' });
-//         }
-
-//         // Check if FinalMeasurementStatus has already been updated
-//         if (finalMeasurementRecord.FinalMeasurementStatus !== null) {
-//             return res.status(400).json({ message: 'Final Measurement Status has already been updated and cannot be changed again.' });
-//         }
-
-//         let newStatusID;
-//         if (FinalMeasurementStatus === 1) {
-//             newStatusID = 6; // StatusID = 6 for FinalMeasurementStatus 1
-//         } else if (FinalMeasurementStatus === 2) {
-//             newStatusID = 4; // StatusID = 4 for FinalMeasurementStatus 2
-//         } else {
-//             return res.status(400).json({ message: 'Invalid FinalMeasurementStatus value. It should be either 1 or 2.' });
-//         }
-
-//         // Fetch the corresponding status name from the OrderStatus table based on the new StatusID
-//         const orderStatus = await OrderStatusModel.findOne({ where: { StatusID: newStatusID } });
-//         if (!orderStatus) {
-//             return res.status(400).json({ message: 'Order status not found for the given StatusID.' });
-//         }
-        
-
-//         // Update the FinalMeasurementStatus, StatusID, and OrderHistoryStatus
-//         await finalMeasurementRecord.update({
-//             FinalMeasurementStatus: FinalMeasurementStatus,
-//             StatusID: newStatusID,
-//             OrderHistoryStatus: orderStatus.OrderStatus // Update with the corresponding status name
-//         });
-
-//              // Update the Order table's status and status ID
-//         await OrderTabelModel.update({
-//             StatusID: newStatusID,
-//             OrderStatus: orderStatus.OrderStatus
-//             }, {
-//                 where: { OrderID }
-//             });
-    
-
-//         return res.status(200).json({ 
-//             message: `Order history updated successfully for Order ID: ${OrderID} with FinalMeasurementStatus: ${FinalMeasurementStatus}, StatusID: ${newStatusID}, and OrderHistoryStatus: ${orderStatus.OrderStatus}` ,
-//             message_Frontend:`Order Status Updated Successfully with FinalMeasurementStatus: ${FinalMeasurementStatus}`
-//         });
-
-//     } catch (error) {
-//         console.error('Error updating order history:', error);
-//         return res.status(500).json({ message: 'Internal server error' });
-//     }
-// };
 
 exports.checkPaymentStatusAndSendEmail = async (req, res) => {
     const { OrderID } = req.body; // Extract OrderID from request body

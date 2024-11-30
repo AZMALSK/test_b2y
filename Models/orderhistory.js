@@ -72,6 +72,10 @@ module.exports = (sequelize) => {
             type: DataTypes.INTEGER,
             allowNull: true, 
         },
+        Progress:{
+            type: DataTypes.INTEGER,
+            allowNull: true, 
+        }, 
         CreatedBy: {
             type: DataTypes.STRING,
             allowNull: true,

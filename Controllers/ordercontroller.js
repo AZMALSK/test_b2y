@@ -281,7 +281,6 @@ exports.createOrderOrUpdate = async (req, res) => {
     await Promise.all([
     // Send email to customer
     sendTemplateEmail(emailTemplate, orderDetails),
-  
     // Send email to assigned user
     sendTemplateEmailForUser(emalilTemplateForUser, orderDetails
 
