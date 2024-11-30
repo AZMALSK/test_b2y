@@ -15,6 +15,7 @@ const FeedbackController=require('../Controllers/FeedBackController');
 const DashboardController=require('../Controllers/DashboardController');
 const ProjectTypeController=require('../Controllers/ProjectTypeController');
 const referenceController = require('../Controllers/referenceController');
+const HolidayCalendarController = require('../Controllers/HolidayCalendarController');
 
 const { createOrderOrUpdate,updateOrder,getOrderById,deleteOrderById,getAllOrders,GetSaleOrderReport,updateSubOrderStatus,triggerAdvanceMeasurementPaymentEmail } = require('../Controllers/ordercontroller');
 const { getAllPayments, getPaymentById,getPaymentByPaymentId,createOrUpdatePayment } = require('../Controllers/PaymentController'); 
@@ -158,6 +159,9 @@ router.put('/reference/:id', referenceController.updateReference);
 router.delete('/reference/:id', referenceController.deleteReference);
 router.get('/getAllData', referenceController.getAllData); // Get all data updated one
 router.get('/getByIdReferences/:id', referenceController.getById); // Get by ID updated one
+
+//routes for HolidayCalendarModel
+router.get('/listHolidays',HolidayCalendarController.listHolidays);
 
 
 
