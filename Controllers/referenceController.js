@@ -206,10 +206,18 @@ exports.getChildrenByParentId = async (req, res) => {
 
 exports.getById = async (req, res) => {
     try {
-        const { id } = req.params; 
-        // Find the reference by ID
+        const { id } = req.params;
+
+        // Find the reference by ID including the parent record
         const reference = await ReferenceModel.findByPk(id, {
-            attributes: ['id', 'name', 'parentId', 'isActive'], 
+            attributes: ['id', 'name', 'parentId', 'isActive'],
+            include: [
+                {
+                    model: ReferenceModel,
+                    as: 'parent', 
+                    attributes: ['name'], 
+                },
+            ],
         });
 
         if (!reference) {
@@ -219,30 +227,28 @@ exports.getById = async (req, res) => {
             });
         }
 
-        // If the record has a parentId, fetch the parent record
-        let parentReference = null;
-        if (reference.parentId) {
-            parentReference = await ReferenceModel.findByPk(reference.parentId, {
-                attributes: ['id', 'name', 'parentId', 'isActive'], 
-            });
-        }
-
-        // Build the flat list response
-        const responseData = parentReference
-            ? [reference, parentReference] // Include parent if it exists
-            : [reference]; // Only the record itself
+        // to include parentName
+        const responseData = {
+            id: reference.id,
+            name: reference.name,
+            parentId: reference.parentId,
+            isActive: reference.isActive,
+            parentName: reference.parent ? reference.parent.name : null, 
+        };
 
         return res.status(200).json({
             success: true,
             data: responseData,
         });
     } catch (error) {
+        console.error('Error fetching data by ID:', error);
         return res.status(500).json({
             success: false,
             message: error.message,
         });
     }
 };
+
 // Get all parentreferences
 exports.getAllParentReferences = async (req, res) => {
     try {
