@@ -19,7 +19,7 @@ const HolidayCalendarController = require('../Controllers/HolidayCalendarControl
 
 const { createOrderOrUpdate,updateOrder,getOrderById,deleteOrderById,getAllOrders,GetSaleOrderReport,updateSubOrderStatus,triggerAdvanceMeasurementPaymentEmail } = require('../Controllers/ordercontroller');
 const { getAllPayments, getPaymentById,getPaymentByPaymentId,createOrUpdatePayment } = require('../Controllers/PaymentController'); 
-const { getAllOrderHistories, getOrderHistoryById,getOrderHistoryByOrderHistoryId,createOrUpdateOrderHistory,getOrderHistoryDocument,getusertasks,updateFinalMeasurementStatus,checkStatusAndSendEmail,checkPaymentStatusAndSendEmail} = require('../Controllers/OrderHistoryController'); 
+const { getAllOrderHistories, getOrderHistoryById,getOrderHistoryByOrderHistoryId,createOrUpdateOrderHistory,getOrderHistoryDocument,getusertasks,updateFinalMeasurementStatus,checkStatusAndSendEmail,checkPaymentStatusAndSendEmail,updateProgressStatus ,getTasksForUser} = require('../Controllers/OrderHistoryController'); 
 const { createOrUpdateMapStoreUser, getAllMapStoreUsers, getMapStoreUserById,getMapStoreUserByUserId ,deleteMapStoreUser} = require('../Controllers/MapStoreUserController');
 
 const upload = require('../middleware/multerconfig');
@@ -88,6 +88,8 @@ router.get('/getusertasks', getusertasks);
 router.post('/checkStatusAndSendEmail', checkStatusAndSendEmail);
 router.post('/updateFinalMeasurementStatus', updateFinalMeasurementStatus);
 router.post('/checkPaymentStatusAndSendEmail', checkPaymentStatusAndSendEmail);
+router.post('/updateProgressStatus', updateProgressStatus);
+router.get('/getTasksForUser/:userId', getTasksForUser);
 // router.get('/order-document/getOrderHistoryDocument/:OrderHistoryID', getOrderHistoryDocument);
 
 // Routes for Payment

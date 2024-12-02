@@ -88,7 +88,7 @@ UserManagementModel.belongsTo(StoreModel, {foreignKey: 'StoreID',as: 'Store'});
 StoreModel.hasMany(RoleModel, {foreignKey: 'StoreID',as: 'Role'});
 RoleModel.belongsTo(StoreModel, {foreignKey: 'StoreID',as: 'Store'});
 
-// // // OrderHistory to OrderStatus association
+//OrderHistory to OrderStatus association
 OrderStatusModel.hasMany(OrderHistory, {foreignKey: 'StatusID'});
 OrderHistory.belongsTo(OrderStatusModel, {foreignKey: 'StatusID'});
 

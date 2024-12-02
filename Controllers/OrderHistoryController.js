@@ -1,6 +1,7 @@
 const {OrderHistory ,OrderTabelModel,OrderStatusModel,CustomerModel,UserManagementModel, Payment, RoleModel,StoreModel,AddressModel,CityModel,StateModel,CountryModel} = require('../ConnectionDB/Connect');
 const { Op } = require('sequelize');
 const { Sequelize, DataTypes } = require('sequelize');
+const { sequelize } = require('../Models/orderhistory');
 // const { upload } = require('../middleware/Cloundinary');
 const { storage } = require('../middleware/Cloundinary');
 const supabase = require('../middleware/supabase');
@@ -1163,5 +1164,193 @@ exports.checkPaymentStatusAndSendEmail = async (req, res) => {
     } catch (error) {
         console.error('Error sending email:', error);
         return res.status(500).json({ message: 'Internal server error' });
+    }
+};
+
+
+// Function to update sub-order status
+exports.updateProgressStatus = async (req, res) => {
+    let { OrderHistoryID, ProgressId } = req.body;
+  
+    ProgressId = parseInt(ProgressId,10);
+  
+    if (!OrderHistoryID || !ProgressId) {
+      return res.status(400).json({ error: 'OrderID and ProgressId are required.' });
+    }
+  
+    try {
+      // Find the order by OrderID
+      const orderHistory = await OrderHistory.findOne({ where: { OrderHistoryID: OrderHistoryID } });
+  
+      if (!orderHistory) {
+        return res.status(404).json({ error: 'OrderHistory not found.' });
+      }
+  
+      // Update SubStatusId and SubStatusUpdatedDate
+      await orderHistory.update({
+        ProgressId: ProgressId,
+        // SubStatusUpdatedDate: new Date(), 
+      });
+  
+      return res.status(200).json({
+        StatusCode: 'SUCCESS',
+        message: 'OrderHistory Progress updated successfully',
+        data: order
+      });
+  
+    } catch (error) {
+      console.error('Error updating sub-status:', error);
+      res.status(500).json({ error: 'Internal Server Error' });
+    }
+  };
+
+
+  // Function to fetch tasks for a specific user
+// exports.getTasksForUser = async (req, res) => {
+//     const { userId } = req.params; // `userId` will come as a parameter
+
+//     try {
+//         // Query to fetch latest record for each OrderID assigned to the user
+//         const tasks = await sequelize.query(
+//             `
+//             SELECT DISTINCT ON ("OrderID") 
+//                 "OrderID",
+//                 "OrderHistoryID",
+//                 "OrderHistoryStatus",
+//                 "UpdatedAt",
+//                 "Comments",
+//                 "DocumentName",
+//                 "TenantID"
+//             FROM "OrderHistory"
+//             WHERE "AssignTo" = :userId
+//             ORDER BY "OrderID", "UpdatedAt" DESC
+//             `,
+//             {
+//                 replacements: { userId }, // Replace :userId with the actual value
+//                 type: sequelize.QueryTypes.SELECT, // Query type for SELECT
+//             }
+//         );
+
+//         if (!tasks.length) {
+//             return res.status(404).json({ message: 'No tasks found for the user.' });
+//         }
+
+//         res.status(200).json(tasks);
+//     } catch (error) {
+//         console.error('Error fetching tasks:', error);
+//         res.status(500).json({ message: 'Internal server error', error });
+//     }
+// };
+
+
+
+// Get latest order status for orders assigned to a user
+exports.getTasksForUser = async (req, res) => {
+    try {
+        const { userId } = req.params; // userId comes from params
+        const { OntimeorDelay } = req.query; // OntimeorDelay comes from query
+
+        const sequelize = OrderHistory.sequelize;
+
+        // Subquery to get the latest OrderHistoryID for each OrderID
+        const latestOrderHistoryIds = await OrderHistory.findAll({
+            attributes: [
+                'OrderID',
+                [sequelize.fn('MAX', sequelize.col('OrderHistoryID')), 'LastOrderHistoryID']
+            ],
+            where: {
+                AssignTo: userId
+            },
+            group: ['OrderID']
+        });
+
+        // Extract the OrderHistoryIDs from the subquery result
+        const orderHistoryIds = latestOrderHistoryIds.map(record => record.get('LastOrderHistoryID'));
+
+        // Main query to get the order details with the latest status
+        const userTasks = await OrderHistory.findAll({
+            where: {
+                OrderHistoryID: {
+                    [Op.in]: orderHistoryIds
+                }
+            },
+            attributes: [
+                'OrderHistoryID',
+                'OrderID',
+                'StatusID',
+                'AssignTo',
+                'Comments',
+                'DocumentName',
+                'OrderHistoryStatus',
+                'SubStatusId',
+                'ProgressId',
+                'EndDate',
+                'CreatedAt',
+                'UpdatedAt'
+            ],
+            include: [
+                {
+                    model: OrderStatusModel,
+                    attributes: ['OrderStatus', 'StatusID'],
+                    as: 'OrderStatus'
+                },
+                {
+                    model: UserManagementModel,
+                    attributes: ['FirstName', 'LastName', 'Email'],
+                    as: 'AssignedUser'
+                }
+            ],
+            order: [
+                ['UpdatedAt', 'DESC']
+            ]
+        });
+
+        // Process tasks and add OntimeorDelay status
+        const processedTasks = userTasks.map(task => {
+            const taskData = task.toJSON();
+            const endDate = moment(taskData.EndDate);
+            const today = moment().startOf('day');
+            const isDelayed = endDate.isBefore(today) ? 2 : 1;
+
+            // Filter by OntimeorDelay if provided
+            if (OntimeorDelay && parseInt(OntimeorDelay) !== isDelayed) {
+                return null; // Exclude tasks not matching the filter
+            }
+
+            return {
+                OrderHistoryID: taskData.OrderHistoryID,
+                OrderID: taskData.OrderID,
+                StatusID: taskData.StatusID,
+                AssignTo: taskData.AssignTo,
+                Comments: taskData.Comments,
+                DocumentName: taskData.DocumentName,
+                OrderHistoryStatus: taskData.OrderHistoryStatus,
+                SubStatusId: taskData.SubStatusId,
+                ProgressId: taskData.ProgressId,
+                EndDate: taskData.EndDate,
+                CreatedAt: taskData.CreatedAt,
+                UpdatedAt: taskData.UpdatedAt,
+                OrderStatus: taskData.OrderStatus?.OrderStatus || null,
+                StatusID: taskData.OrderStatus?.StatusID || null,
+                FirstName: taskData.AssignedUser?.FirstName || null,
+                LastName: taskData.AssignedUser?.LastName || null,
+                Email: taskData.AssignedUser?.Email || null,
+                OntimeorDelay: isDelayed
+            };
+        }).filter(Boolean); // Remove null entries
+
+        return res.status(200).json({
+            success: true,
+            data: processedTasks,
+            message: 'User tasks retrieved successfully'
+        });
+
+    } catch (error) {
+        console.error('Error fetching user tasks:', error);
+        return res.status(500).json({
+            success: false,
+            message: 'Error retrieving user tasks',
+            error: error.message
+        });
     }
 };

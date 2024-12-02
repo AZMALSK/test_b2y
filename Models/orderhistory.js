@@ -72,7 +72,7 @@ module.exports = (sequelize) => {
             type: DataTypes.INTEGER,
             allowNull: true, 
         },
-        Progress:{
+        ProgressId:{
             type: DataTypes.INTEGER,
             allowNull: true, 
         }, 
