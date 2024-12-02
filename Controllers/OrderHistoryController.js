@@ -1195,7 +1195,7 @@ exports.updateProgressStatus = async (req, res) => {
       return res.status(200).json({
         StatusCode: 'SUCCESS',
         message: 'OrderHistory Progress updated successfully',
-        data: order
+        data: orderHistory
       });
   
     } catch (error) {
