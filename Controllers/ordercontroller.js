@@ -8,6 +8,7 @@ const ExcelJS = require('exceljs');
 const { sendTemplateEmail , sendTemplateEmailForUser} = require('../middleware/SendEmail'); 
 const { sendSMS } = require('../middleware/twilioConfig');
 const { assign } = require('nodemailer/lib/shared');
+const cron = require('node-cron');
 
 const upload = multer({ storage: storage }).fields([
   { name: 'UploadImages', maxCount: 10 },   
@@ -1018,4 +1019,89 @@ function calculateDueDate() {
   dueDate.setDate(dueDate.getDate() + 7);
   return dueDate.toISOString().split('T')[0];
 }
+
+exports.schedulePreDeliveryNotifications = () => {
+  console.log('Scheduling pre-delivery notification job');
+  
+  try {
+    // Run once daily at 9:00 AM
+    // Cron format: minute hour day-of-month month day-of-week
+    //cron.schedule('*/10 * * * * *', async () => {
+      cron.schedule('0 */2 * * *', async () => {
+
+      console.log('CRON JOB TRIGGERED: Running pre-delivery notification job');
+      console.log('Current Time:', new Date().toLocaleString());
+      
+      // Calculate the date range for orders
+      // Find orders where delivery date is exactly 7 days from now
+      const targetDeliveryDate = moment().add(7, 'days').startOf('day');
+      const nextDay = moment().add(8, 'days').startOf('day');
+      
+      console.log('Checking orders with delivery date:', targetDeliveryDate.format('YYYY-MM-DD'));
+      
+      const ordersNearingDelivery = await OrderTabelModel.findAll({
+        where: {
+          StatusID: 7,
+          SubStatusId: 3,
+          DeliveryDate: {
+            [Op.gte]: targetDeliveryDate.toDate(),
+            [Op.lt]: nextDay.toDate()
+          }
+        },
+        include: [{
+          model: CustomerModel,
+          as: 'Customer',
+          attributes: ['CustomerID', 'FirstName', 'Email']
+        }]
+      });
+      
+      // Send notifications for matching orders
+      let successCount = 0;
+      for (const order of ordersNearingDelivery) {
+        try {
+          await triggerPreDeliveryNotificationEmail(order);
+          successCount++;
+        } catch (emailError) {
+          console.error(`Failed to send notification for order ${order.id}:`, emailError);
+        }
+      }
+      
+      console.log(`Successfully sent ${successCount} out of ${ordersNearingDelivery.length} pre-delivery notifications`);
+    });
+    
+    console.log('Pre-delivery notification job scheduled successfully');
+  } catch (error) {
+    console.error('FATAL ERROR in pre-delivery notification job:', error);
+  }
+};
+const triggerPreDeliveryNotificationEmail = async (order) => {
+  try {
+    if (!order || !order.Customer) {
+      console.error('Invalid order or customer data');
+      return;
+    }
+
+    // Prepare email data for template
+    const emailData = {
+      customerFirstName: order.Customer.FirstName,
+      customerEmail: order.Customer.Email,
+      OrderNumber: order.OrderNumber,
+      OrderDate: moment(order.OrderDate).format('MMMM Do, YYYY'),
+      DeliveryDate: moment(order.DeliveryDate).format('MMMM Do, YYYY'),
+      TotalAmount: parseFloat(order.TotalAmount).toFixed(2),
+      PreDeliveryInstructions: 'Production is completed, and your order will be ready for PDI (Pre-Delivery Inspection) within the next 7 days.'
+    };
+
+    try {
+      // Send email using template
+      await sendTemplateEmail('PreDeliveryNotificationEmail', emailData);
+
+      console.log(`Pre-delivery notification sent to ${order.Customer.Email} for Order #${order.OrderNumber}`);
+    } catch (emailError) {
+      console.error(`Failed to send pre-delivery notification for Order #${order.OrderNumber}:`, emailError);
+    }
+  } catch (error) {
+    console.error(`Error processing pre-delivery notification for Order #${order.OrderNumber}:`, error);
+  }
+};
 

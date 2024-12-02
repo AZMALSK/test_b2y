@@ -17,7 +17,7 @@ const ProjectTypeController=require('../Controllers/ProjectTypeController');
 const referenceController = require('../Controllers/referenceController');
 const HolidayCalendarController = require('../Controllers/HolidayCalendarController');
 
-const { createOrderOrUpdate,updateOrder,getOrderById,deleteOrderById,getAllOrders,GetSaleOrderReport,updateSubOrderStatus,triggerAdvanceMeasurementPaymentEmail } = require('../Controllers/ordercontroller');
+const { createOrderOrUpdate,updateOrder,getOrderById,deleteOrderById,getAllOrders,GetSaleOrderReport,updateSubOrderStatus,triggerAdvanceMeasurementPaymentEmail,schedulePreDeliveryNotifications } = require('../Controllers/ordercontroller');
 const { getAllPayments, getPaymentById,getPaymentByPaymentId,createOrUpdatePayment } = require('../Controllers/PaymentController'); 
 const { getAllOrderHistories, getOrderHistoryById,getOrderHistoryByOrderHistoryId,createOrUpdateOrderHistory,getOrderHistoryDocument,getusertasks,updateFinalMeasurementStatus,checkStatusAndSendEmail,checkPaymentStatusAndSendEmail,updateProgressStatus ,getTasksForUser} = require('../Controllers/OrderHistoryController'); 
 const { createOrUpdateMapStoreUser, getAllMapStoreUsers, getMapStoreUserById,getMapStoreUserByUserId ,deleteMapStoreUser} = require('../Controllers/MapStoreUserController');
@@ -71,6 +71,8 @@ router.get('/getAllOrders', getAllOrders);
 router.post('/GetSaleOrderReport',GetSaleOrderReport);
 router.post('/updateSubOrderStatus',updateSubOrderStatus);
 router.post('/triggerAdvanceMeasurementPaymentEmail',triggerAdvanceMeasurementPaymentEmail);
+router.get('/schedulePreDeliveryNotifications',schedulePreDeliveryNotifications);
+
 
 
 //Routes for Roles
