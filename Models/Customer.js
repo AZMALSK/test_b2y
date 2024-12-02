@@ -66,7 +66,14 @@ module.exports=(sequelize)=>{
             type:DataTypes.INTEGER,
             allowNull: false
         },
-
+        ReferredByID: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            references: {
+                model: 'Reference', // Table name
+                key: 'id', // Primary key in the Reference table
+            },
+        },
         CreatedBy: {
             type: DataTypes.STRING(255),
             allowNull: true

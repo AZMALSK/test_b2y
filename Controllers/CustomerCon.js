@@ -1,11 +1,158 @@
-const { sequelize, CustomerModel, AddressModel, Orders,StoreModel,CityModel,StateModel,CountryModel ,OrderTabelModel} = require('../ConnectionDB/Connect');
+const { sequelize, CustomerModel, AddressModel, Orders,StoreModel,CityModel,StateModel,CountryModel ,OrderTabelModel,ReferenceModel} = require('../ConnectionDB/Connect');
  const { Sequelize, DataTypes } = require('sequelize');
  const { sendTemplateEmail } = require('../middleware/SendEmail'); 
 const Address = require('../Models/Address');
 
  
-exports.createOrUpdateCustomer = async (req, res) => {
+// exports.createOrUpdateCustomer = async (req, res) => {
 
+//     const {
+//         CustomerID,
+//         TenantID,
+//         FirstName,
+//         LastName,
+//         Email,
+//         Password,
+//         PhoneNumber,
+//         Alternative_PhoneNumber,
+//         ReferedBy,
+//         SubReference,
+//         Comments,
+//         Gender,
+//         StoreID,
+//         CreatedBy,
+//         UpdatedBy
+//     } = req.body;
+ 
+//     try {
+//         // Ensure TenantID is provided
+//         if (!TenantID) {
+//             return res.status(400).json({ error: 'TenantID is required' });
+//         }
+ 
+//         if (CustomerID) {
+//             const existingCustomer = await CustomerModel.findByPk(CustomerID);
+ 
+//             if (!existingCustomer) {
+//                 return res.status(404).json({ error: 'Customer not found' });
+//             }
+ 
+//             await existingCustomer.update({
+//                 TenantID,
+//                 FirstName,
+//                 LastName,
+//                 Email,
+//                 Password,
+//                 PhoneNumber,
+//                 Alternative_PhoneNumber,
+//                 ReferedBy,
+//                 SubReference: SubReference || 'self',
+//                 Comments,
+//                 Gender,
+//                 StoreID,
+//                 UpdatedAt: new Date(), 
+//                 UpdatedBy
+//             });
+ 
+//             const customerDetails = {
+//                 customerFirstName: FirstName,
+//                 customerLastName: LastName,
+//                 customerEmail: Email,
+//                 FirstName,
+//                 LastName,
+//                 Email,
+//                 PhoneNumber,
+//                 Alternative_PhoneNumber,
+//                 ReferedBy,
+//                 SubReference,
+//                 Comments,
+//                 StoreID,
+//                 Gender
+//             };
+ 
+//             try {
+//                 await sendTemplateEmail('Customer Updated', customerDetails);
+//                 return res.status(200).json({
+//                     StatusCode: 'SUCCESS',
+//                     message: 'Customer updated successfully and email sent',
+//                     CustomerID: existingCustomer.CustomerID
+//                 });
+//             } catch (emailError) {
+//                 console.error('Error sending update email:', emailError);
+//                 return res.status(500).json({ error: 'Customer updated but error sending email' });
+//             }
+//         } else {
+//             const emailExists = await CustomerModel.findOne({ where: { Email } });
+//             if (emailExists) {
+//                 return res.status(400).json({ error: 'Email already exists' });
+//             }
+            
+//             const transaction = await sequelize.transaction();
+ 
+//             try {
+//                 // Fetch the StoreCode from the Store table using StoreID
+//                 const store = await StoreModel.findByPk(StoreID);
+//                 if (!store) {
+//                     return res.status(404).json({ error: 'Store not found' });
+//                 }
+//                 const storeCode = store.StoreCode; // assuming StoreCode exists in Store model
+
+//                 // Create a new customer
+//                 const newCustomer = await CustomerModel.create({
+//                     TenantID,
+//                     FirstName,
+//                     LastName,
+//                     Email,
+//                     Password,
+//                     PhoneNumber,
+//                     Alternative_PhoneNumber,
+//                     ReferedBy,
+//                     SubReference: SubReference || 'self',
+//                     Comments,
+//                     Gender,
+//                     CreatedBy,
+//                     StoreID,
+//                     CreatedAt: new Date(),
+//                     UpdatedAt: new Date(),
+//                     UpdatedBy
+//                 }, { transaction });
+
+//                 // Generate the CustomerNumber using StoreCode and CustomerID
+//                 const customerNumber = `${storeCode}/${newCustomer.CustomerID}`;
+
+//                 // Update the new customer with the generated CustomerNumber
+//                 await newCustomer.update({ CustomerNumber: customerNumber }, { transaction });
+
+//                 // Prepare customer details for the email
+//                 const customerDetails = {
+//                     customerFirstName: FirstName,
+//                     customerLastName: LastName,
+//                     customerEmail: Email
+//                 };
+ 
+//                 // Send the email notification
+//                 await sendTemplateEmail('CustomerCreated', customerDetails);
+ 
+//                 await transaction.commit();
+ 
+//                 return res.status(201).json({
+//                     StatusCode: 'SUCCESS',
+//                     message: 'Customer created successfully',
+//                     CustomerID: newCustomer.CustomerID
+//                 });
+//             } catch (emailError) {
+//                 await transaction.rollback();
+//                 console.error('Error sending email:', emailError);
+//                 return res.status(500).json({ error: 'Error sending email' });
+//             }
+//         }
+//     } catch (error) {
+//         console.error('Error creating or updating customer:', error);
+//         res.status(500).json({ error: 'Internal Server Error' });
+//     }
+// };
+
+exports.createOrUpdateCustomer = async (req, res) => {
     const {
         CustomerID,
         TenantID,
@@ -15,28 +162,61 @@ exports.createOrUpdateCustomer = async (req, res) => {
         Password,
         PhoneNumber,
         Alternative_PhoneNumber,
-        ReferedBy,
-        SubReference,
         Comments,
         Gender,
         StoreID,
+        ReferredByID,
         CreatedBy,
         UpdatedBy
     } = req.body;
- 
+
     try {
-        // Ensure TenantID is provided
         if (!TenantID) {
             return res.status(400).json({ error: 'TenantID is required' });
         }
- 
+
+        // Reference lookup
+        let referedBy = null;
+        let subReference = null;
+
+        if (ReferredByID) {
+            const reference = await ReferenceModel.findOne({
+                where: { id: ReferredByID },
+                attributes: ['id', 'name', 'parentId', 'isActive'],
+                include: [
+                    {
+                        model: ReferenceModel,
+                        as: 'parent',
+                        attributes: ['name']
+                    }
+                ]
+            });
+
+            if (!reference) {
+                return res.status(404).json({ error: 'Invalid ReferredByID' });
+            }
+            //referedBy = reference.parent ? reference.parent.name : reference.name;
+            referedBy = reference.parent ? reference.parent.name : null
+            subReference = reference.name;
+        }
+
         if (CustomerID) {
-            const existingCustomer = await CustomerModel.findByPk(CustomerID);
- 
+            // Update existing customer
+            const existingCustomer = await CustomerModel.findByPk(CustomerID, {
+                include: [
+                    {
+                        model: ReferenceModel,
+                        as: 'ReferredBy',
+                        attributes: ['name']
+                    }
+                ]
+            });
+
             if (!existingCustomer) {
                 return res.status(404).json({ error: 'Customer not found' });
             }
- 
+
+            // Update existing customer
             await existingCustomer.update({
                 TenantID,
                 FirstName,
@@ -45,59 +225,39 @@ exports.createOrUpdateCustomer = async (req, res) => {
                 Password,
                 PhoneNumber,
                 Alternative_PhoneNumber,
-                ReferedBy,
-                SubReference: SubReference || 'self',
+                ReferedBy: referedBy || (existingCustomer.ReferredBy ? existingCustomer.ReferredBy.name : null),
+                SubReference: subReference || existingCustomer.SubReference || 'self',
                 Comments,
                 Gender,
                 StoreID,
-                UpdatedAt: new Date(), 
+                ReferredByID,
+                UpdatedAt: new Date(),
                 UpdatedBy
             });
- 
-            const customerDetails = {
-                customerFirstName: FirstName,
-                customerLastName: LastName,
-                customerEmail: Email,
-                FirstName,
-                LastName,
-                Email,
-                PhoneNumber,
-                Alternative_PhoneNumber,
-                ReferedBy,
-                SubReference,
-                Comments,
-                StoreID,
-                Gender
-            };
- 
-            try {
-                await sendTemplateEmail('Customer Updated', customerDetails);
-                return res.status(200).json({
-                    StatusCode: 'SUCCESS',
-                    message: 'Customer updated successfully and email sent',
-                    CustomerID: existingCustomer.CustomerID
-                });
-            } catch (emailError) {
-                console.error('Error sending update email:', emailError);
-                return res.status(500).json({ error: 'Customer updated but error sending email' });
-            }
+
+            return res.status(200).json({
+                StatusCode: 'SUCCESS',
+                message: 'Customer updated successfully',
+                CustomerID: existingCustomer.CustomerID
+            });
         } else {
+            // Create new customer
             const emailExists = await CustomerModel.findOne({ where: { Email } });
             if (emailExists) {
                 return res.status(400).json({ error: 'Email already exists' });
             }
-            
+
             const transaction = await sequelize.transaction();
- 
+
             try {
-                // Fetch the StoreCode from the Store table using StoreID
                 const store = await StoreModel.findByPk(StoreID);
                 if (!store) {
+                    await transaction.rollback();
                     return res.status(404).json({ error: 'Store not found' });
                 }
-                const storeCode = store.StoreCode; // assuming StoreCode exists in Store model
+                const storeCode = store.StoreCode;
 
-                // Create a new customer
+                // Create new customer
                 const newCustomer = await CustomerModel.create({
                     TenantID,
                     FirstName,
@@ -106,52 +266,39 @@ exports.createOrUpdateCustomer = async (req, res) => {
                     Password,
                     PhoneNumber,
                     Alternative_PhoneNumber,
-                    ReferedBy,
-                    SubReference: SubReference || 'self',
+                    ReferedBy: referedBy,
+                    SubReference: subReference || 'self',
                     Comments,
                     Gender,
-                    CreatedBy,
                     StoreID,
+                    ReferredByID,
+                    CreatedBy,
                     CreatedAt: new Date(),
                     UpdatedAt: new Date(),
                     UpdatedBy
                 }, { transaction });
 
-                // Generate the CustomerNumber using StoreCode and CustomerID
                 const customerNumber = `${storeCode}/${newCustomer.CustomerID}`;
-
-                // Update the new customer with the generated CustomerNumber
                 await newCustomer.update({ CustomerNumber: customerNumber }, { transaction });
 
-                // Prepare customer details for the email
-                const customerDetails = {
-                    customerFirstName: FirstName,
-                    customerLastName: LastName,
-                    customerEmail: Email
-                };
- 
-                // Send the email notification
-                await sendTemplateEmail('CustomerCreated', customerDetails);
- 
                 await transaction.commit();
- 
+
                 return res.status(201).json({
                     StatusCode: 'SUCCESS',
                     message: 'Customer created successfully',
                     CustomerID: newCustomer.CustomerID
                 });
-            } catch (emailError) {
+            } catch (error) {
                 await transaction.rollback();
-                console.error('Error sending email:', emailError);
-                return res.status(500).json({ error: 'Error sending email' });
+                console.error('Error creating customer:', error);
+                return res.status(500).json({ error: 'Internal Server Error' });
             }
         }
     } catch (error) {
         console.error('Error creating or updating customer:', error);
-        res.status(500).json({ error: 'Internal Server Error' });
+        return res.status(500).json({ error: 'Internal Server Error' });
     }
 };
-
 exports.getAllCustomers = async (req, res) => {
     const page = parseInt(req.query.page, 10) || 1;
     const limit = parseInt(req.query.limit, 10) || 10;

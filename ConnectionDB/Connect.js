@@ -181,7 +181,16 @@ RoleModel.hasMany(UserManagementModel, { foreignKey: 'RoleID' });
 OrderTabelModel.belongsTo(ProjectTypeModel, {foreignKey: 'ProjectTypeID', as: 'ProjectType',});
 OrderTabelModel.belongsTo(ReferenceModel, {foreignKey: 'ReferredByID', as: 'ReferredBy',});
 
+//  Customer and Reference
+ReferenceModel.hasMany(CustomerModel, { 
+  foreignKey: 'ReferredByID', 
+  as: 'Customers' 
+});
 
+CustomerModel.belongsTo(ReferenceModel, { 
+  foreignKey: 'ReferredByID', 
+  as: 'ReferredBy' 
+});
 
 // ReferenceModel associations
 // A child record belongs to one parent
