@@ -71,7 +71,7 @@ router.get('/getAllOrders', getAllOrders);
 router.post('/GetSaleOrderReport',GetSaleOrderReport);
 router.post('/updateSubOrderStatus',updateSubOrderStatus);
 router.post('/triggerAdvanceMeasurementPaymentEmail',triggerAdvanceMeasurementPaymentEmail);
-router.get('/schedulePreDeliveryNotifications',schedulePreDeliveryNotifications);
+router.post('/schedulePreDeliveryNotifications',schedulePreDeliveryNotifications);
 
 
 

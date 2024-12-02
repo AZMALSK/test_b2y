@@ -1020,20 +1020,15 @@ function calculateDueDate() {
   return dueDate.toISOString().split('T')[0];
 }
 
-exports.schedulePreDeliveryNotifications = () => {
+exports.schedulePreDeliveryNotifications = async (req, res) => {
   console.log('Scheduling pre-delivery notification job');
   
   try {
-    // Run once daily at 9:00 AM
-    // Cron format: minute hour day-of-month month day-of-week
     //cron.schedule('*/10 * * * * *', async () => {
       cron.schedule('0 */2 * * *', async () => {
-
       console.log('CRON JOB TRIGGERED: Running pre-delivery notification job');
       console.log('Current Time:', new Date().toLocaleString());
       
-      // Calculate the date range for orders
-      // Find orders where delivery date is exactly 7 days from now
       const targetDeliveryDate = moment().add(7, 'days').startOf('day');
       const nextDay = moment().add(8, 'days').startOf('day');
       
@@ -1055,23 +1050,42 @@ exports.schedulePreDeliveryNotifications = () => {
         }]
       });
       
-      // Send notifications for matching orders
       let successCount = 0;
+      let failedCount = 0;
+      
       for (const order of ordersNearingDelivery) {
         try {
           await triggerPreDeliveryNotificationEmail(order);
           successCount++;
         } catch (emailError) {
+          failedCount++;
           console.error(`Failed to send notification for order ${order.id}:`, emailError);
         }
       }
       
       console.log(`Successfully sent ${successCount} out of ${ordersNearingDelivery.length} pre-delivery notifications`);
+
+      // Send response to postman
+      return res.status(200).json({
+        status: 'success',
+        message: 'Pre-delivery notificationEmail send successfully',
+        data: {
+          totalOrders: ordersNearingDelivery.length,
+          emailsSent: successCount,
+          emailsFailed: failedCount,
+          processedAt: new Date().toISOString()
+        }
+      });
     });
     
     console.log('Pre-delivery notification job scheduled successfully');
   } catch (error) {
     console.error('FATAL ERROR in pre-delivery notification job:', error);
+    return res.status(500).json({
+      status: 'error',
+      message: 'Failed to process pre-delivery notifications',
+      error: error.message
+    });
   }
 };
 const triggerPreDeliveryNotificationEmail = async (order) => {
