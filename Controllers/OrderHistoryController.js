@@ -1298,6 +1298,13 @@ exports.getTasksForUser = async (req, res) => {
                     model: UserManagementModel,
                     attributes: ['FirstName', 'LastName', 'Email'],
                     as: 'AssignedUser'
+                },
+                {
+                    model: OrderTabelModel,
+                    as: 'OrdersTable',
+                    attributes: [
+                        'OrderNumber'
+                    ],
                 }
             ],
             order: [
@@ -1328,8 +1335,9 @@ exports.getTasksForUser = async (req, res) => {
                 SubStatusId: taskData.SubStatusId,
                 ProgressId: taskData.ProgressId,
                 EndDate: taskData.EndDate,
-                CreatedAt: taskData.CreatedAt,
+                StartDate: taskData.CreatedAt,
                 UpdatedAt: taskData.UpdatedAt,
+                OrderNumber: taskData.OrdersTable?.OrderNumber || null,
                 OrderStatus: taskData.OrderStatus?.OrderStatus || null,
                 StatusID: taskData.OrderStatus?.StatusID || null,
                 FirstName: taskData.AssignedUser?.FirstName || null,
