@@ -159,7 +159,9 @@ exports.createOrderOrUpdate = async (req, res) => {
         StoreCode,
         SubStatusId,
         Type: projectType ? projectType.ProjectTypeName : null,        // Dynamically set Type
-        ReferedBy: reference ? reference.ReferenceName : null,       
+        ReferedBy: reference ? reference.ReferenceName : null,    
+        ProjectTypeID:ProjectTypeID,
+        ReferredByID :ReferredByID,    
         UpdatedBy: OrderBy,
         UpdatedAt: new Date(),
       }, { transaction });
@@ -191,7 +193,9 @@ exports.createOrderOrUpdate = async (req, res) => {
         ExpectedDurationDays,
         StoreCode,
         StatusDeliveryDate: updatedStatusDeliveryDate, // Use updated date
-        Type: projectType ? projectType.ProjectTypeName : null,     
+        Type: projectType ? projectType.ProjectTypeName : null, 
+        ProjectTypeID:ProjectTypeID,
+        ReferredByID :ReferredByID,    
         ReferedBy: reference ? reference.name : null,       
         CreatedBy: OrderBy,
         CreatedAt: new Date(),
@@ -807,6 +811,7 @@ exports.getOrderById = async (req, res) => {
       TotalQuantity: order.TotalQuantity,
       DeliveryDate: order.DeliveryDate,
       Type: order.Type,
+      ProjectTypeID:order.ProjectTypeID,
       Comments: order.Comments,
       OrderDate: order.OrderDate,
       DesginerName: order.DesginerName,
@@ -1088,6 +1093,7 @@ exports.schedulePreDeliveryNotifications = async (req, res) => {
     });
   }
 };
+
 const triggerPreDeliveryNotificationEmail = async (order) => {
   try {
     if (!order || !order.Customer) {
