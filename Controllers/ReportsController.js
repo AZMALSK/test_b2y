@@ -171,11 +171,11 @@ exports.getOrderReport = async (req, res) => {
                     model: CustomerModel,as:'Customer',
                     attributes: ['FirstName', 'LastName', 'PhoneNumber', 'Email'],
                 },
-                {
-                    model: OrderStatusModel,
-                    as: 'Order_TabelStatus',
-                    attributes: ['OrderStatus'],
-                },
+                // {
+                //     model: OrderStatusModel,
+                //     as: 'Order_TabelStatus',
+                //     attributes: ['OrderStatus'],
+                // },
                 {
                     model: Payment,
                     as: 'Payments',
@@ -187,7 +187,7 @@ exports.getOrderReport = async (req, res) => {
                 [Sequelize.literal('GREATEST("OrdersTable"."CreatedAt", "OrdersTable"."UpdatedAt")'), 'DESC'],
                 ['DesginerName', 'ASC']
               ],
-            attributes: ['OrderID', 'OrderNumber', 'OrderDate', 'TotalAmount', 'DeliveryDate','CreatedAt'],
+            attributes: ['OrderID', 'OrderNumber', 'OrderDate', 'TotalAmount', 'DeliveryDate','CreatedAt','OrderStatus'],
         });
 
         // If no orders found, return 200 with an error message
@@ -211,7 +211,8 @@ exports.getOrderReport = async (req, res) => {
                 OrderNumber: order.OrderNumber,
                 StoreName: order.StoreTabel?.StoreName || 'N/A',
                 OrderDate: order.OrderDate ? order.OrderDate.toISOString().split('T')[0] : 'N/A',
-                OrderStatus: order.Order_TabelStatus?.OrderStatus || 'N/A',
+                //OrderStatus: order.Order_TabelStatus?.OrderStatus || 'N/A',
+                OrderStatus: order.OrderStatus || 'N/A',
                 ExpectedDeliveryDate: order.DeliveryDate ? order.DeliveryDate.toISOString().split('T')[0] : 'N/A',
                 CustomerName: order.Customer ? `${order.Customer.FirstName} ${order.Customer.LastName}` : 'N/A',
                 CustomerContact: order.Customer?.PhoneNumber || 'N/A',
@@ -288,6 +289,7 @@ exports.getOrderReport = async (req, res) => {
         });
     }
 };
+
 
 
 exports.getCustomerReport = async (req, res) => {
