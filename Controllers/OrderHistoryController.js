@@ -397,12 +397,12 @@ if (!OrderHistoryID || OrderHistoryID == 0) {
     }
 
      // Increment subStatusId when OrderStatus reaches 10
-     if (StatusID === 10) {
+     if (StatusID === 11) {
         subStatusId = orderExists.SubStatusId + 1;
     }
     
     // Set SubStatusId to 1 if StatusID is 7
-    if (StatusID === 7) {
+    if (StatusID === 8) {
         subStatusId = 1;
     }
 
@@ -417,7 +417,6 @@ if (!OrderHistoryID || OrderHistoryID == 0) {
         }
     }
 }
-
 
             let newOrUpdatedOrderHistory;
             if (!OrderHistoryID || OrderHistoryID == 0) {
@@ -509,11 +508,11 @@ if (!OrderHistoryID || OrderHistoryID == 0) {
 async function triggerStatusEmail(OrderID) {
     try {
         const orderHistory = await OrderHistory.findOne({
-            where: { OrderID, StatusID: 5 }
+            where: { OrderID, StatusID: 6 }
         });
 
         if (!orderHistory) {
-            throw new Error('No matching order with StatusID 5 found.');
+            throw new Error('No matching order with StatusID 6 found.');
         }
 
         const order = await OrderTabelModel.findOne({ where: { OrderID } });
@@ -544,10 +543,10 @@ async function triggerStatusEmail(OrderID) {
 async function triggerFeedbackEmail(OrderID) {
     try {
         const orderHistory = await OrderHistory.findAll({
-            where: { OrderID, StatusID: 11 }
+            where: { OrderID, StatusID: 12 }
         });
         if (!orderHistory) {
-            throw new Error('No matching order with StatusID 11 found.');
+            throw new Error('No matching order with StatusID 12 found.');
         }
 
         const order = await OrderTabelModel.findOne({ where: { OrderID } });
@@ -968,7 +967,7 @@ exports.checkStatusAndSendEmail = async (req, res) => {
     try {
         // Fetch order history based on the OrderID and StatusID
         const orderHistory = await OrderHistory.findOne({
-            where: { OrderID, StatusID: 5 }
+            where: { OrderID, StatusID: 6 }
         });
 
         if (!orderHistory) {
@@ -1035,13 +1034,13 @@ exports.updateFinalMeasurementStatus = async (req, res) => {
         const currentDate = moment().format('YYYY-MM-DD HH:mm:ss');
 
         if (FinalMeasurementStatus === 1) { // Approved
-            newStatusID = 6; // StatusID for approved
+            newStatusID = 7; // StatusID for approved
             message = "Thanks for your Approval, will start the production based on this signup document";
             comment = "Approved by Customer";
             endDate = currentDate;
 
         } else if (FinalMeasurementStatus === 2) { // Declined
-            newStatusID = 4; // StatusID for declined
+            newStatusID = 5; // StatusID for declined
             message = "Thanks for your response. We will check with our technical team and get back to you for more revisions.";
             comment = "Declined by Customer";
             endDate = currentDate;

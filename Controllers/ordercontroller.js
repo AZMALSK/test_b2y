@@ -1139,7 +1139,7 @@ exports.updateSubOrderStatus = async (req, res) => {
 async function triggerPaymentEmail(OrderID) {
     try {
         const orderHistory = await OrderHistory.findAll({
-            where: { OrderID, StatusID: 7 }
+            where: { OrderID, StatusID: 8 }
         });
         if (!orderHistory || orderHistory.length === 0) {
             throw new Error('No matching order with StatusID 7 found.');
