@@ -503,6 +503,7 @@ exports.getCustomerByIdWithoutAddress = async (req, res) => {
                 Alternative_PhoneNumber:customer.Alternative_PhoneNumber,
                 ReferedBy:customer.ReferedBy,
                 SubReference:customer.SubReference,
+                ReferredByID:customer.ReferredByID,
                 Comments:customer.Comments,
                 Gender: customer.Gender,
                 StoreID:customer.StoreID,
