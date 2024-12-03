@@ -407,7 +407,7 @@ if (!OrderHistoryID || OrderHistoryID == 0) {
     }
 
     // Handle subStatus assignment for StatusID 5, using SubStatusId of last StatusID 4 record
-    if (StatusID === 5) {
+    if (StatusID === 6) {
         const lastStatus4Record = await OrderHistory.findOne({
             where: { OrderID, StatusID: 4 },
             order: [['CreatedAt', 'DESC']],

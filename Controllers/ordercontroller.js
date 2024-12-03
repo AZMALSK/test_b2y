@@ -1277,7 +1277,7 @@ exports.schedulePreDeliveryNotifications = async (req, res) => {
       
       const ordersNearingDelivery = await OrderTabelModel.findAll({
         where: {
-          StatusID: 7,
+          StatusID: 8,
           SubStatusId: 3,
           DeliveryDate: {
             [Op.gte]: targetDeliveryDate.toDate(),
