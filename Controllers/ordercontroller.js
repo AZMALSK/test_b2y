@@ -15,294 +15,456 @@ const upload = multer({ storage: storage }).fields([
 ]);
 
 
+// exports.createOrderOrUpdate = async (req, res) => {
+//   const {
+//     OrderID,  // New field to check if the order exists for updating
+//     TenantID,
+//     CustomerID,
+//     AddressID, // AddressID is now mandatory for both create and update
+//     OrderDate,
+//     TotalQuantity,
+//     TotalAmount,
+//     OrderStatus,
+//     OrderBy,
+//     DeliveryDate,
+//     // Type,
+//     Comments,
+//     UserID,
+//     AssignTo,
+//     StatusDeliveryDate,
+//     // ReferedBy,
+//     ExpectedDurationDays,
+//     DesginerName,
+//     StoreCode,  // Ensure this is included for both create and update
+//     SubStatusId,
+//     StoreID,
+//     ProjectTypeID,  // New field
+//     ReferredByID    // New field
+//   } = req.body;
+
+//   const transaction = await sequelize.transaction();
+
+//   try {
+//     const customerIdToUse = parseInt(CustomerID);
+//     const addressIdToUse = parseInt(AddressID);
+
+//     if (!StoreCode) {
+//       return res.status(400).json({ error: 'StoreCode is required' });
+//     }
+
+//     if (isNaN(customerIdToUse) || isNaN(addressIdToUse)) {
+//       return res.status(400).json({ error: 'Invalid CustomerID or AddressID' });
+//     }
+
+//     // Validate the customer exists
+//     const customer = await CustomerModel.findByPk(customerIdToUse);
+//     if (!customer) {
+//       return res.status(200).json({ error: 'CustomerID not found.' });
+//     }
+//     const Store = await StoreModel.findByPk(StoreID);
+//     if (!Store) {
+//       return res.status(200).json({ error: 'StoreID not found.' });
+//     }
+
+//     // Get assigned user details
+//     const assignedUser = await UserManagementModel.findByPk(AssignTo);
+//     if (!assignedUser) {
+//     return res.status(200).json({ error: 'Assigned user not found.' }); 
+//     }
+
+//         // Get ProjectType if ProjectTypeID is provided
+//         let projectType = null;
+//         if (ProjectTypeID) {
+//           projectType = await ProjectTypeModel.findByPk(ProjectTypeID);
+//           if (!projectType) {
+//             return res.status(200).json({ error: 'ProjectTypeID not found.' });
+//           }
+//         }
+    
+//         // Get Reference if ReferredByID is provided
+//         let reference = null;
+//         if (ReferredByID) {
+//           reference = await ReferenceModel.findByPk(ReferredByID);
+//           if (!reference) {
+//             return res.status(200).json({ error: 'ReferredByID not found.' });
+//           }
+//         }
+    
+//     // Validate the address exists for the customer and include associations
+//     const existingAddress = await AddressModel.findOne({
+//       where: {
+//         AddressID: addressIdToUse,
+//         CustomerID: customerIdToUse,
+//       },
+//       include: [
+//         { model: CityModel, as: 'City' },
+//         { model: StateModel, as: 'State' },
+//         { model: CountryModel, as: 'Country' },
+//       ],
+//     });
+
+//     if (!existingAddress) {
+//       return res.status(200).json({ error: 'Address not found for the given CustomerID.' });
+//     }
+
+//     let newOrder;
+//     let operationMessage;  // Message to differentiate between create and update
+//     let emailTemplate;     // Variable for email template
+//     let emalilTemplateForUser;
+
+//     // Add 3 days to current date for StatusDeliveryDate
+//     const updatedStatusDeliveryDate = new Date();
+//     updatedStatusDeliveryDate.setDate(updatedStatusDeliveryDate.getDate() + 3);
+
+//     if (OrderID) {
+//       // Scenario 1: Update an existing order if OrderID is provided
+//       newOrder = await OrderTabelModel.findOne({
+//         where: {
+//           OrderID,
+//           CustomerID: customerIdToUse,
+//           AddressID: addressIdToUse,  // Ensure the update is based on OrderID, CustomerID, and AddressID
+//         },
+//         include: [
+//           {
+//             model: StoreModel, 
+//             as: 'StoreTabel',
+//             attributes: ['StoreName','StoreID']
+//           },
+//         ]  
+//       });
+
+//       if (!newOrder) {
+//         return res.status(200).json({ error: 'Order not found for the given CustomerID and AddressID.' });
+//       }
+
+//       // Update the existing order
+//       await newOrder.update({
+//         TenantID,
+//         CustomerID: customerIdToUse,
+//         AddressID: addressIdToUse,
+//         OrderDate,
+//         TotalQuantity,
+//         TotalAmount,
+//         OrderStatus,
+//         OrderBy,
+//         DeliveryDate,
+//         Comments,
+//         DesginerName,
+//         StoreID,
+//         UserID,
+//         ExpectedDurationDays,
+//         StoreCode,
+//         SubStatusId,
+//         Type: projectType ? projectType.ProjectTypeName : null,        // Dynamically set Type
+//         ReferedBy: reference ? reference.ReferenceName : null,    
+//         ProjectTypeID:ProjectTypeID,
+//         ReferredByID :ReferredByID,    
+//         UpdatedBy: OrderBy,
+//         UpdatedAt: new Date(),
+//       }, { transaction });
+
+//       const orderNumber = `${StoreCode}/${newOrder.OrderID}`;
+//       await newOrder.update({ OrderNumber: orderNumber }, { transaction });
+
+//       operationMessage = 'Order updated successfully';
+//       emailTemplate = 'UpdateOrder';  
+
+//     } else {
+//       // Scenario 2: Create a new order if OrderID is not provided
+//       newOrder = await OrderTabelModel.create({
+//         TenantID,
+//         CustomerID: customerIdToUse,
+//         AddressID: addressIdToUse,  // Create the order for a specific AddressID
+//         TotalQuantity,
+//         TotalAmount,
+//         OrderStatus: 'Quick Quote',
+//         SubStatusId: 0,
+//         OrderBy,
+//         DeliveryDate,
+//         Comments,
+//         DesginerName,
+//         StoreID,
+//         UserID,
+//         ExpectedDurationDays,
+//         StoreCode,
+//         StatusDeliveryDate: updatedStatusDeliveryDate, // Use updated date
+//         Type: projectType ? projectType.ProjectTypeName : null, 
+//         ProjectTypeID:ProjectTypeID,
+//         ReferredByID :ReferredByID,    
+//         ReferedBy: reference ? reference.name : null,       
+//         CreatedBy: OrderBy,
+//         CreatedAt: new Date(),
+//         UpdatedBy: OrderBy,
+//         UpdatedAt: new Date(),
+//       }, { transaction });
+
+//       // Create an entry in OrderHistory for the new order
+//       await OrderHistory.create({
+//         OrderID: newOrder.OrderID,
+//         TenantID,
+//         UserID,
+//         OrderStatus: newOrder.OrderStatus,
+//         StatusID: 1,
+//         UserRoleID:1,
+//         // StartDate: new Date(),
+//         EndDate: updatedStatusDeliveryDate, 
+//         AssignTo,
+//         Comments,
+//         DocumentName: null, // Assuming no document at the creation
+//         OrderHistoryStatus: newOrder.OrderStatus,
+//         // CreatedBy: 'System',
+//         CreatedAt: new Date(),
+//         UpdatedAt: new Date(),
+//       }, { transaction });
+
+//       // Construct and update OrderNumber
+//       const orderNumber = `IM/${StoreCode}/${newOrder.OrderID}`;
+//       await newOrder.update({ OrderNumber: orderNumber }, { transaction });
+
+//       operationMessage = 'Order created successfully';
+//       emailTemplate = 'CreateOrder';  // Use a create-specific email template
+//       emalilTemplateForUser = 'OrderAssignment';
+//     }
+
+//     // Use existingAddress as address
+//     const address = existingAddress;
+
+//     // Function to format dates consistently
+//     const formatDate = (date) => {
+//       return new Date(date).toLocaleDateString('en-GB', {
+//         day: 'numeric',
+//         month: 'long',
+//         year: 'numeric'
+//       }).replace(',', '');
+//     };
+
+//     // const store = newOrder.StoreTabel ? newOrder.StoreTabel.StoreName : '';
+//     // console.log(store)
+//     const orderDetails = {
+//       customerFirstName: customer.FirstName,
+//       customerEmail: customer.Email,
+//       OrderNumber: newOrder.OrderNumber || `IM/${StoreCode}/${newOrder.OrderID}`,
+//       Type: newOrder.Type,
+//       StoreID: newOrder.StoreID,
+//       StoreName: Store.StoreName,
+//       OrderDate: formatDate(newOrder.CreatedAt),
+//       DeliVeryDate: formatDate(DeliveryDate),
+//       TotalAmount: new Intl.NumberFormat('en-IN', {
+//         style: 'currency',
+//         currency: 'INR',
+//         minimumFractionDigits: 2,
+//       }).format(TotalAmount).replace('₹', ''),
+//       DeliveryAddress: `${address.AddressLine1}${address.AddressLine2 ? '\n' + address.AddressLine2 : ''}
+//       ${address.City ? address.City.CityName : ''}, ${address.State ? address.State.StateName : ''} ${address.ZipCode}
+//       ${address.Country ? address.Country.CountryName : ''}`,
+//       customerPhone: customer.PhoneNumber,
+//       AddressLine1: address.AddressLine1,
+//       AddressLine2: address.AddressLine2,
+//       City: address.City ? address.City.CityName : '',
+//       State: address.State ? address.State.StateName : '',
+//       ZipCode: address.ZipCode,
+//       Country: address.Country ? address.Country.CountryName : '',
+//       // 
+//       assignedUserName: `${assignedUser.FirstName} ${assignedUser.LastName}`,
+//       assignedUserEmail: assignedUser.Email,
+//       assignedUserPhone: assignedUser.PhoneNumber
+//     };
+
+//     // Send Email and SMS Notifications
+//     // sendTemplateEmail(emailTemplate, orderDetails);  // Send Email based on the operation
+//     // sendSMS(orderDetails.customerPhone, message);    // Send SMS
+
+   
+//     await transaction.commit();
+   
+//     // Send emails to both customer and assigned user
+//     await Promise.all([
+//     // Send email to customer
+//     sendTemplateEmail(emailTemplate, orderDetails),
+//     // Send email to assigned user
+//     sendTemplateEmailForUser(emalilTemplateForUser, orderDetails
+
+//   ),
+// ]);
+
+
+//     res.status(200).json({
+//       StatusCode: 'SUCCESS',
+//       message: operationMessage,
+//       OrderID: newOrder.OrderID,
+//       OrderNumber: newOrder.OrderNumber || `IM/${StoreCode}/${newOrder.OrderID}`,
+//     });
+
+//   } catch (error) {
+//     await transaction.rollback();
+//     console.error('Error creating/updating order:', error);
+//     res.status(500).json({ error: 'Internal Server Error' });
+//   }
+// };
+
+
+const sendNotificationEmails = async (emailTemplate, userEmailTemplate, orderDetails) => {
+  try {
+    // Send emails to both customer and assigned user concurrently
+    await Promise.all([
+      sendTemplateEmail(emailTemplate, orderDetails),
+      sendTemplateEmailForUser(userEmailTemplate, orderDetails),
+    ]);
+    console.log("Emails sent successfully.");
+  } catch (error) {
+    console.error("Error sending notification emails:", error);
+    throw error;
+  }
+};
+
 exports.createOrderOrUpdate = async (req, res) => {
   const {
-    OrderID,  // New field to check if the order exists for updating
+    OrderID,
     TenantID,
     CustomerID,
-    AddressID, // AddressID is now mandatory for both create and update
+    AddressID,
     OrderDate,
     TotalQuantity,
     TotalAmount,
     OrderStatus,
     OrderBy,
     DeliveryDate,
-    // Type,
     Comments,
     UserID,
     AssignTo,
-    StatusDeliveryDate,
-    // ReferedBy,
     ExpectedDurationDays,
     DesginerName,
-    StoreCode,  // Ensure this is included for both create and update
+    StoreCode,
     SubStatusId,
     StoreID,
-    ProjectTypeID,  // New field
-    ReferredByID    // New field
+    ProjectTypeID,
+    ReferredByID,
   } = req.body;
 
   const transaction = await sequelize.transaction();
 
   try {
-    const customerIdToUse = parseInt(CustomerID);
-    const addressIdToUse = parseInt(AddressID);
+    // Validate and retrieve related entities
+    const customer = await CustomerModel.findByPk(parseInt(CustomerID));
+    if (!customer) throw new Error("Customer not found.");
 
-    if (!StoreCode) {
-      return res.status(400).json({ error: 'StoreCode is required' });
-    }
-
-    if (isNaN(customerIdToUse) || isNaN(addressIdToUse)) {
-      return res.status(400).json({ error: 'Invalid CustomerID or AddressID' });
-    }
-
-    // Validate the customer exists
-    const customer = await CustomerModel.findByPk(customerIdToUse);
-    if (!customer) {
-      return res.status(200).json({ error: 'CustomerID not found.' });
-    }
-    const Store = await StoreModel.findByPk(StoreID);
-    if (!Store) {
-      return res.status(200).json({ error: 'StoreID not found.' });
-    }
-
-    // Get assigned user details
-    const assignedUser = await UserManagementModel.findByPk(AssignTo);
-    if (!assignedUser) {
-    return res.status(200).json({ error: 'Assigned user not found.' }); 
-    }
-
-        // Get ProjectType if ProjectTypeID is provided
-        let projectType = null;
-        if (ProjectTypeID) {
-          projectType = await ProjectTypeModel.findByPk(ProjectTypeID);
-          if (!projectType) {
-            return res.status(200).json({ error: 'ProjectTypeID not found.' });
-          }
-        }
-    
-        // Get Reference if ReferredByID is provided
-        let reference = null;
-        if (ReferredByID) {
-          reference = await ReferenceModel.findByPk(ReferredByID);
-          if (!reference) {
-            return res.status(200).json({ error: 'ReferredByID not found.' });
-          }
-        }
-    
-    // Validate the address exists for the customer and include associations
-    const existingAddress = await AddressModel.findOne({
-      where: {
-        AddressID: addressIdToUse,
-        CustomerID: customerIdToUse,
-      },
+    const address = await AddressModel.findOne({
+      where: { AddressID: parseInt(AddressID), CustomerID: parseInt(CustomerID) },
       include: [
-        { model: CityModel, as: 'City' },
-        { model: StateModel, as: 'State' },
-        { model: CountryModel, as: 'Country' },
+        { model: CityModel, as: "City" },
+        { model: StateModel, as: "State" },
+        { model: CountryModel, as: "Country" },
       ],
     });
+    if (!address) throw new Error("Address not found.");
 
-    if (!existingAddress) {
-      return res.status(200).json({ error: 'Address not found for the given CustomerID.' });
+    const store = await StoreModel.findByPk(StoreID);
+    if (!store) throw new Error("Store not found.");
+
+    const assignedUser = await UserManagementModel.findByPk(AssignTo);
+    if (!assignedUser) throw new Error("Assigned user not found.");
+
+    let projectType = null;
+    if (ProjectTypeID) {
+      projectType = await ProjectTypeModel.findByPk(ProjectTypeID);
+      if (!projectType) throw new Error("Project type not found.");
     }
 
-    let newOrder;
-    let operationMessage;  // Message to differentiate between create and update
-    let emailTemplate;     // Variable for email template
-    let emalilTemplateForUser;
+    let reference = null;
+    if (ReferredByID) {
+      reference = await ReferenceModel.findByPk(ReferredByID);
+      if (!reference) throw new Error("Reference not found.");
+    }
 
-    // Add 3 days to current date for StatusDeliveryDate
-    const updatedStatusDeliveryDate = new Date();
-    updatedStatusDeliveryDate.setDate(updatedStatusDeliveryDate.getDate() + 3);
+    let newOrder, operationMessage, emailTemplate, userEmailTemplate;
 
     if (OrderID) {
-      // Scenario 1: Update an existing order if OrderID is provided
-      newOrder = await OrderTabelModel.findOne({
-        where: {
-          OrderID,
-          CustomerID: customerIdToUse,
-          AddressID: addressIdToUse,  // Ensure the update is based on OrderID, CustomerID, and AddressID
-        },
-        include: [
-          {
-            model: StoreModel, 
-            as: 'StoreTabel',
-            attributes: ['StoreName','StoreID']
-          },
-        ]  
-      });
+      // Update existing order
+      newOrder = await OrderTabelModel.findOne({ where: { OrderID } });
+      if (!newOrder) throw new Error("Order not found.");
 
-      if (!newOrder) {
-        return res.status(200).json({ error: 'Order not found for the given CustomerID and AddressID.' });
-      }
-
-      // Update the existing order
       await newOrder.update({
         TenantID,
-        CustomerID: customerIdToUse,
-        AddressID: addressIdToUse,
+        CustomerID,
+        AddressID,
         OrderDate,
         TotalQuantity,
         TotalAmount,
         OrderStatus,
         OrderBy,
         DeliveryDate,
-        // Type,
         Comments,
-        // ReferedBy,
         DesginerName,
         StoreID,
         UserID,
-        // StatusDeliveryDate: updatedStatusDeliveryDate, // Use updated date
         ExpectedDurationDays,
         StoreCode,
         SubStatusId,
-        Type: projectType ? projectType.ProjectTypeName : null,        // Dynamically set Type
-        ReferedBy: reference ? reference.ReferenceName : null,    
-        ProjectTypeID:ProjectTypeID,
-        ReferredByID :ReferredByID,    
+        Type: projectType ? projectType.ProjectTypeName : null,
+        ReferedBy: reference ? reference.name : null,
+        ProjectTypeID,
+        ReferredByID,
         UpdatedBy: OrderBy,
-        UpdatedAt: new Date(),
       }, { transaction });
 
-      const orderNumber = `${StoreCode}/${newOrder.OrderID}`;
-      await newOrder.update({ OrderNumber: orderNumber }, { transaction });
-
-      operationMessage = 'Order updated successfully';
-      emailTemplate = 'UpdateOrder';  
+      operationMessage = "Order updated successfully";
+      emailTemplate = "UpdateOrder";
+      userEmailTemplate = "OrderAssignment";
 
     } else {
-      // Scenario 2: Create a new order if OrderID is not provided
+      // Create new order
       newOrder = await OrderTabelModel.create({
         TenantID,
-        CustomerID: customerIdToUse,
-        AddressID: addressIdToUse,  // Create the order for a specific AddressID
+        CustomerID,
+        AddressID,
         TotalQuantity,
         TotalAmount,
-        OrderStatus: 'Quick Quote',
+        OrderStatus: "Quick Quote",
         SubStatusId: 0,
         OrderBy,
         DeliveryDate,
-        // Type,
         Comments,
-        // ReferedBy,
         DesginerName,
         StoreID,
         UserID,
         ExpectedDurationDays,
         StoreCode,
-        StatusDeliveryDate: updatedStatusDeliveryDate, // Use updated date
-        Type: projectType ? projectType.ProjectTypeName : null, 
-        ProjectTypeID:ProjectTypeID,
-        ReferredByID :ReferredByID,    
-        ReferedBy: reference ? reference.name : null,       
+        StatusDeliveryDate: new Date(),
+        Type: projectType ? projectType.ProjectTypeName : null,
+        ReferedBy: reference ? reference.name : null,
+        ProjectTypeID,
+        ReferredByID,
         CreatedBy: OrderBy,
-        CreatedAt: new Date(),
         UpdatedBy: OrderBy,
-        UpdatedAt: new Date(),
       }, { transaction });
 
-      // Create an entry in OrderHistory for the new order
-      await OrderHistory.create({
-        OrderID: newOrder.OrderID,
-        TenantID,
-        UserID,
-        OrderStatus: newOrder.OrderStatus,
-        StatusID: 1,
-        UserRoleID:1,
-        // StartDate: new Date(),
-        EndDate: updatedStatusDeliveryDate, 
-        AssignTo,
-        Comments,
-        DocumentName: null, // Assuming no document at the creation
-        OrderHistoryStatus: newOrder.OrderStatus,
-        // CreatedBy: 'System',
-        CreatedAt: new Date(),
-        UpdatedAt: new Date(),
-      }, { transaction });
-
-      // Construct and update OrderNumber
-      const orderNumber = `IM/${StoreCode}/${newOrder.OrderID}`;
-      await newOrder.update({ OrderNumber: orderNumber }, { transaction });
-
-      operationMessage = 'Order created successfully';
-      emailTemplate = 'CreateOrder';  // Use a create-specific email template
-      emalilTemplateForUser = 'OrderAssignment';
+      operationMessage = "Order created successfully";
+      emailTemplate = "CreateOrder";
+      userEmailTemplate = "OrderAssignment";
     }
 
-    // Use existingAddress as address
-    const address = existingAddress;
-
-    // Function to format dates consistently
-    const formatDate = (date) => {
-      return new Date(date).toLocaleDateString('en-GB', {
-        day: 'numeric',
-        month: 'long',
-        year: 'numeric'
-      }).replace(',', '');
-    };
-
-    // const store = newOrder.StoreTabel ? newOrder.StoreTabel.StoreName : '';
-    // console.log(store)
+    // Prepare order details for email
     const orderDetails = {
       customerFirstName: customer.FirstName,
       customerEmail: customer.Email,
       OrderNumber: newOrder.OrderNumber || `IM/${StoreCode}/${newOrder.OrderID}`,
-      Type: newOrder.Type,
-      StoreID: newOrder.StoreID,
-      StoreName: Store.StoreName,
-      OrderDate: formatDate(newOrder.CreatedAt),
-      DeliVeryDate: formatDate(DeliveryDate),
-      TotalAmount: new Intl.NumberFormat('en-IN', {
-        style: 'currency',
-        currency: 'INR',
-        minimumFractionDigits: 2,
-      }).format(TotalAmount).replace('₹', ''),
-      DeliveryAddress: `${address.AddressLine1}${address.AddressLine2 ? '\n' + address.AddressLine2 : ''}
-      ${address.City ? address.City.CityName : ''}, ${address.State ? address.State.StateName : ''} ${address.ZipCode}
-      ${address.Country ? address.Country.CountryName : ''}`,
-      customerPhone: customer.PhoneNumber,
-      AddressLine1: address.AddressLine1,
-      AddressLine2: address.AddressLine2,
-      City: address.City ? address.City.CityName : '',
-      State: address.State ? address.State.StateName : '',
-      ZipCode: address.ZipCode,
-      Country: address.Country ? address.Country.CountryName : '',
-      // 
+      StoreName: store.StoreName,
+      DeliveryAddress: `${address.AddressLine1}, ${address.City.CityName}, ${address.State.StateName}, ${address.Country.CountryName}, ${address.ZipCode}`,
       assignedUserName: `${assignedUser.FirstName} ${assignedUser.LastName}`,
       assignedUserEmail: assignedUser.Email,
-      assignedUserPhone: assignedUser.PhoneNumber
     };
 
-    // Send Email and SMS Notifications
-    // sendTemplateEmail(emailTemplate, orderDetails);  // Send Email based on the operation
-    // sendSMS(orderDetails.customerPhone, message);    // Send SMS
-
-   
-
+    // Commit transaction
     await transaction.commit();
-    // Send emails to both customer and assigned user
-    await Promise.all([
-    // Send email to customer
-    sendTemplateEmail(emailTemplate, orderDetails),
-    // Send email to assigned user
-    sendTemplateEmailForUser(emalilTemplateForUser, orderDetails
 
-  ),
-]);
+    // Send notification emails
+    await sendNotificationEmails(emailTemplate, userEmailTemplate, orderDetails);
 
-    res.status(200).json({
-      StatusCode: 'SUCCESS',
-      message: operationMessage,
-      OrderID: newOrder.OrderID,
-      OrderNumber: newOrder.OrderNumber || `IM/${StoreCode}/${newOrder.OrderID}`,
-    });
-
+    res.status(200).json({ StatusCode: "SUCCESS", message: operationMessage });
   } catch (error) {
     await transaction.rollback();
-    console.error('Error creating/updating order:', error);
-    res.status(500).json({ error: 'Internal Server Error' });
+    console.error("Error:", error.message);
+    res.status(500).json({ error: error.message });
   }
 };
 
@@ -780,7 +942,7 @@ exports.getOrderById = async (req, res) => {
         }
       ],
       attributes: [
-        'OrderID', 'OrderNumber', 'OrderStatus', 'StatusID', 'TotalQuantity', 'TotalAmount', 'DeliveryDate', 
+        'OrderID', 'OrderNumber', 'OrderStatus', 'StatusID', 'TotalQuantity', 'TotalAmount', 'DeliveryDate', 'ProjectTypeID', 'ReferredByID', 
         'Type', 'Comments', 'DesginerName', 'CreatedAt', 'OrderDate', 'StoreID', 'StatusDeliveryDate','ExpectedDurationDays','ReferedBy','AddressID','SubStatusId'
       ],
     });
@@ -811,7 +973,6 @@ exports.getOrderById = async (req, res) => {
       TotalQuantity: order.TotalQuantity,
       DeliveryDate: order.DeliveryDate,
       Type: order.Type,
-      ProjectTypeID:order.ProjectTypeID,
       Comments: order.Comments,
       OrderDate: order.OrderDate,
       DesginerName: order.DesginerName,
@@ -819,6 +980,8 @@ exports.getOrderById = async (req, res) => {
       ReferedBy: order.ReferedBy,
       CreatedAt: order.CreatedAt,
       SubStatusId:order.SubStatusId,
+      ProjectTypeID:order.ProjectTypeID,
+      ReferredByID:order.ReferredByID,
       StatusDeliveryDate: order.StatusDeliveryDate,
       CustomerID: order.Customer?.CustomerID || null,
       CustomerFirstName: order.Customer?.FirstName|| null,
