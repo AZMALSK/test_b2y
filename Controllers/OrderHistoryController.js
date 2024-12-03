@@ -146,6 +146,7 @@ const path = require('path');
 // };
 
 
+
 const upload = multer({ storage: multer.memoryStorage() }).fields([
     { name: 'UploadDocument', maxCount: 10 }
 ]);
@@ -181,7 +182,7 @@ const uploadFileToSupabase = async (file) => {
     return { publicUrl, downloadUrl, originalFileName: file.originalname };
 };
 
-/*async function sendAssignmentNotification(OrderID, StatusID) {
+async function sendAssignmentNotification(OrderID, StatusID) {
     try {
         // Get order details with all necessary associations
         const order = await OrderTabelModel.findOne({
@@ -317,7 +318,7 @@ const uploadFileToSupabase = async (file) => {
         console.error('Error sending assignment notification:', error);
         throw error;
     }
-} */
+}
 
 exports.createOrUpdateOrderHistory = async (req, res) => {
     upload(req, res, async function (err) {
@@ -467,9 +468,9 @@ if (!OrderHistoryID || OrderHistoryID == 0) {
             }
 
                 // After successful order history creation/update, send notification
-            //     if (AssignTo) {  // Only send notification if there's an assigned user
-            //     await sendAssignmentNotification(OrderID, StatusID);
-            // }
+                if (AssignTo) {  // Only send notification if there's an assigned user
+                await sendAssignmentNotification(OrderID, StatusID);
+            }
             // Update order table with new status and sub-status
             await OrderTabelModel.update({ 
                 OrderStatus, 
@@ -502,6 +503,7 @@ if (!OrderHistoryID || OrderHistoryID == 0) {
         }
     });
 };
+
 
 
 
