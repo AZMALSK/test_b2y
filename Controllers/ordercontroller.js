@@ -376,8 +376,10 @@ exports.createOrderOrUpdate = async (req, res) => {
       if (!reference) throw new Error("Reference not found.");
     }
 
-    let newOrder, operationMessage, emailTemplate, userEmailTemplate;
-
+    let newOrder, operationMessage, emailTemplate, emalilTemplateForUser;
+    const updatedStatusDeliveryDate = new Date();
+    updatedStatusDeliveryDate.setDate(updatedStatusDeliveryDate.getDate() + 3);
+    
     if (OrderID) {
       // Update existing order
       newOrder = await OrderTabelModel.findOne({ where: { OrderID } });
@@ -406,11 +408,13 @@ exports.createOrderOrUpdate = async (req, res) => {
         ReferredByID,
         UpdatedBy: OrderBy,
       }, { transaction });
-
+      
+      const orderNumber = `${StoreCode}/${newOrder.OrderID}`;
+      await newOrder.update({ OrderNumber: orderNumber }, { transaction });
+      
       operationMessage = "Order updated successfully";
       emailTemplate = "UpdateOrder";
-      userEmailTemplate = "OrderAssignment";
-
+      emalilTemplateForUser = 'UpdatedAssignment';
     } else {
       // Create new order
       newOrder = await OrderTabelModel.create({
@@ -438,27 +442,95 @@ exports.createOrderOrUpdate = async (req, res) => {
         UpdatedBy: OrderBy,
       }, { transaction });
 
-      operationMessage = "Order created successfully";
-      emailTemplate = "CreateOrder";
-      userEmailTemplate = "OrderAssignment";
+      //       // Create an entry in OrderHistory for the new order
+      await OrderHistory.create({
+        OrderID: newOrder.OrderID,
+        TenantID,
+        UserID,
+        OrderStatus: newOrder.OrderStatus,
+        StatusID: 1,
+        UserRoleID:1,
+        // StartDate: new Date(),
+        EndDate: updatedStatusDeliveryDate, 
+        AssignTo,
+        Comments,
+        DocumentName: null, // Assuming no document at the creation
+        OrderHistoryStatus: newOrder.OrderStatus,
+        // CreatedBy: 'System',
+        CreatedAt: new Date(),
+        UpdatedAt: new Date(),
+      }, { transaction });
+
+      // Construct and update OrderNumber
+      const orderNumber = `IM/${StoreCode}/${newOrder.OrderID}`;
+      await newOrder.update({ OrderNumber: orderNumber }, { transaction });
+
+      operationMessage = 'Order created successfully';
+      emailTemplate = 'CreateOrder';  // Use a create-specific email template
+      emalilTemplateForUser = 'OrderAssignment';
+
     }
 
     // Prepare order details for email
+    // const orderDetails = {
+    //   customerFirstName: customer.FirstName,
+    //   customerEmail: customer.Email,
+    //   OrderNumber: newOrder.OrderNumber || `IM/${StoreCode}/${newOrder.OrderID}`,
+    //   StoreName: store.StoreName,
+    //   DeliveryAddress: `${address.AddressLine1}, ${address.City.CityName}, ${address.State.StateName}, ${address.Country.CountryName}, ${address.ZipCode}`,
+    //   assignedUserName: `${assignedUser.FirstName} ${assignedUser.LastName}`,
+    //   assignedUserEmail: assignedUser.Email,
+    // };
+
+      // Use existingAddress as address
+    // const address = existingAddress;
+
+    // Function to format dates consistently
+    const formatDate = (date) => {
+      return new Date(date).toLocaleDateString('en-GB', {
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric'
+      }).replace(',', '');
+    };
+
+    // const store = newOrder.StoreTabel ? newOrder.StoreTabel.StoreName : '';
+    // console.log(store)
     const orderDetails = {
       customerFirstName: customer.FirstName,
       customerEmail: customer.Email,
       OrderNumber: newOrder.OrderNumber || `IM/${StoreCode}/${newOrder.OrderID}`,
+      Type: newOrder.Type,
+      StoreID: newOrder.StoreID,
       StoreName: store.StoreName,
-      DeliveryAddress: `${address.AddressLine1}, ${address.City.CityName}, ${address.State.StateName}, ${address.Country.CountryName}, ${address.ZipCode}`,
+      OrderDate: formatDate(newOrder.CreatedAt),
+      DeliVeryDate: formatDate(DeliveryDate),
+      TotalAmount: new Intl.NumberFormat('en-IN', {
+        style: 'currency',
+        currency: 'INR',
+        minimumFractionDigits: 2,
+      }).format(TotalAmount).replace('₹', ''),
+      DeliveryAddress: `${address.AddressLine1}${address.AddressLine2 ? '\n' + address.AddressLine2 : ''}
+      ${address.City ? address.City.CityName : ''}, ${address.State ? address.State.StateName : ''} ${address.ZipCode}
+      ${address.Country ? address.Country.CountryName : ''}`,
+      customerPhone: customer.PhoneNumber,
+      AddressLine1: address.AddressLine1,
+      AddressLine2: address.AddressLine2,
+      City: address.City ? address.City.CityName : '',
+      State: address.State ? address.State.StateName : '',
+      ZipCode: address.ZipCode,
+      Country: address.Country ? address.Country.CountryName : '',
+      // 
       assignedUserName: `${assignedUser.FirstName} ${assignedUser.LastName}`,
       assignedUserEmail: assignedUser.Email,
+      assignedUserPhone: assignedUser.PhoneNumber
     };
 
     // Commit transaction
     await transaction.commit();
 
     // Send notification emails
-    await sendNotificationEmails(emailTemplate, userEmailTemplate, orderDetails);
+    await sendNotificationEmails(emailTemplate, emalilTemplateForUser, orderDetails);
 
     res.status(200).json({ StatusCode: "SUCCESS", message: operationMessage });
   } catch (error) {
@@ -973,6 +1045,7 @@ exports.getOrderById = async (req, res) => {
       TotalQuantity: order.TotalQuantity,
       DeliveryDate: order.DeliveryDate,
       Type: order.Type,
+      ProjectTypeID:order.ProjectTypeID,
       Comments: order.Comments,
       OrderDate: order.OrderDate,
       DesginerName: order.DesginerName,
@@ -1193,8 +1266,7 @@ exports.schedulePreDeliveryNotifications = async (req, res) => {
   
   try {
     //cron.schedule('*/10 * * * * *', async () => {
-      //cron.schedule('0 */2 * * *', async () => {
-        cron.schedule('0 0 */2 * * *', async () => {
+      cron.schedule('0 */2 * * *', async () => {
       console.log('CRON JOB TRIGGERED: Running pre-delivery notification job');
       console.log('Current Time:', new Date().toLocaleString());
       
