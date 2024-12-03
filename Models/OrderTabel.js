@@ -50,6 +50,10 @@ module.exports=(sequelize)=>{
                 key: 'id', // Primary key in the Reference table
             },
         },
+        SubReference:{
+            type:DataTypes.STRING(50),
+            allowNull:true
+        },
         StatusDeliveryDate:{
             type: DataTypes.DATE,
             defaultValue: DataTypes.NOW

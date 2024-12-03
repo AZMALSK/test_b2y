@@ -369,13 +369,36 @@ exports.createOrderOrUpdate = async (req, res) => {
       projectType = await ProjectTypeModel.findByPk(ProjectTypeID);
       if (!projectType) throw new Error("Project type not found.");
     }
+  // Reference lookup
+  let referedBy = null;
+  let subReference = null;
+    // let reference = null;
 
-    let reference = null;
+    // if (ReferredByID) {
+    //   reference = await ReferenceModel.findByPk(ReferredByID);
+    //   if (!reference) throw new Error("Reference not found.");
+    // }
+
     if (ReferredByID) {
-      reference = await ReferenceModel.findByPk(ReferredByID);
-      if (!reference) throw new Error("Reference not found.");
-    }
+      const reference = await ReferenceModel.findOne({
+          where: { id: ReferredByID },
+          attributes: ['id', 'name', 'parentId', 'isActive'],
+          include: [
+              {
+                  model: ReferenceModel,
+                  as: 'parent',
+                  attributes: ['name']
+              }
+          ]
+      });
 
+      if (!reference) {
+          return res.status(404).json({ error: 'Invalid ReferredByID' });
+      }
+      //referedBy = reference.parent ? reference.parent.name : reference.name;
+      referedBy = reference.parent ? reference.parent.name : null
+      subReference = reference.name;
+  }
     let newOrder, operationMessage, emailTemplate, emalilTemplateForUser;
     const updatedStatusDeliveryDate = new Date();
     updatedStatusDeliveryDate.setDate(updatedStatusDeliveryDate.getDate() + 3);
@@ -403,7 +426,8 @@ exports.createOrderOrUpdate = async (req, res) => {
         StoreCode,
         SubStatusId,
         Type: projectType ? projectType.ProjectTypeName : null,
-        ReferedBy: reference ? reference.name : null,
+        ReferedBy: referedBy || (existingCustomer.ReferredBy ? existingCustomer.ReferredBy.name : null),
+        SubReference: subReference || existingCustomer.SubReference || 'self',
         ProjectTypeID,
         ReferredByID,
         UpdatedBy: OrderBy,
@@ -435,7 +459,8 @@ exports.createOrderOrUpdate = async (req, res) => {
         StoreCode,
         StatusDeliveryDate: new Date(),
         Type: projectType ? projectType.ProjectTypeName : null,
-        ReferedBy: reference ? reference.name : null,
+        ReferedBy: referedBy,
+        SubReference: subReference || 'self',
         ProjectTypeID,
         ReferredByID,
         CreatedBy: OrderBy,
