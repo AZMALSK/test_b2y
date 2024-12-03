@@ -479,13 +479,13 @@ if (!OrderHistoryID || OrderHistoryID == 0) {
             }, { where: { OrderID } });
 
             // Trigger email logic for certain statuses
-            if (StatusID === 5 || StatusID === 11) {
+            if (StatusID === 6 || StatusID === 12) {
                 console.log(`Triggering email for StatusID ${StatusID}`); 
                 if (StatusID === 5) {
                     await triggerStatusEmail(OrderID);
                 // } else if (StatusID === 7) {
                 //     await triggerPaymentEmail(OrderID);
-                } else if (StatusID === 11) {
+                } else if (StatusID === 12) {
                     await triggerFeedbackEmail(OrderID);  
                 }
             }
