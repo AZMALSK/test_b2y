@@ -1193,7 +1193,8 @@ exports.schedulePreDeliveryNotifications = async (req, res) => {
   
   try {
     //cron.schedule('*/10 * * * * *', async () => {
-      cron.schedule('0 */2 * * *', async () => {
+      //cron.schedule('0 */2 * * *', async () => {
+        cron.schedule('0 0 */2 * * *', async () => {
       console.log('CRON JOB TRIGGERED: Running pre-delivery notification job');
       console.log('Current Time:', new Date().toLocaleString());
       
