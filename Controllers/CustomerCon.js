@@ -472,7 +472,7 @@ exports.getCustomerById = async (req, res) => {
     }
 };
 
-exports.getCustomerByIdWithoutAddress = async (req, res) => {
+/*exports.getCustomerByIdWithoutAddress = async (req, res) => {
     const { id } = req.params;
 
     try {
@@ -521,7 +521,7 @@ exports.getCustomerByIdWithoutAddress = async (req, res) => {
             message: 'Internal Server Error'
         });
     }
-};
+}; */
 
 exports.deleteCustomer = async (req, res) => {
     const { id } = req.params; 
@@ -557,9 +557,6 @@ exports.deleteCustomer = async (req, res) => {
         res.status(500).json({ error: 'Internal Server Error' });
     }
 };
-
-
-
 
 exports.getOrderByCustomerId = async (req, res) => {
     const { id } = req.params;  
@@ -604,5 +601,86 @@ exports.getOrderByCustomerId = async (req, res) => {
       res.status(500).json({ error: 'Internal Server Error' });
     }
   };
-  
+
+//added refereces parent and child
+exports.getCustomerByIdWithoutAddress = async (req, res) => {
+        const { id } = req.params;
+    
+        try {
+            const customer = await CustomerModel.findOne({
+                where: { CustomerID: id }
+            });
+    
+            if (!customer) {
+                return res.status(404).json({
+                    StatusCode: 'NOT_FOUND',
+                    message: 'Customer not found'
+                });
+            }
+    
+            // If no ReferredByID, return customer without reference details
+            if (!customer.ReferredByID) {
+                return res.status(200).json({
+                    StatusCode: 'SUCCESS',
+                    customer: {
+                        ...customer.toJSON(),
+                        ReferenceDetails: null
+                       
+                    }
+                });
+            }
+    
+            // Fetch reference details including parent and children
+            const referenceDetails = await ReferenceModel.findOne({
+                where: { id: customer.ReferredByID },
+                include: [
+                    {
+                        model: ReferenceModel,
+                        as: 'parent',
+                        attributes: ['id', 'name']
+                    }
+                ],
+                attributes: ['id', 'name', 'parentId', 'isActive']
+            });
+    
+            return res.status(200).json({
+                StatusCode: 'SUCCESS',
+                customer: {
+                    CustomerID: customer.CustomerID,
+                    CustomerNumber: customer.CustomerNumber,
+                    TenantID: customer.TenantID,
+                    FirstName: customer.FirstName,
+                    LastName: customer.LastName,
+                    Email: customer.Email,
+                    Password: customer.Password,
+                    PhoneNumber: customer.PhoneNumber,
+                    Alternative_PhoneNumber: customer.Alternative_PhoneNumber,
+                    
+                    ParentReferenceID: referenceDetails.parentId,
+                    ReferedBy: customer.ReferedBy,
+    
+                    
+                    ReferredByID: customer.ReferredByID,
+                    SubReference: customer.SubReference,
+    
+                    Comments: customer.Comments,
+                    Gender: customer.Gender,
+                    StoreID: customer.StoreID,
+                    CreatedBy: customer.CreatedBy,
+                    CreatedAt: customer.createdAt,
+                    UpdatedBy: customer.UpdatedBy,
+                    UpdatedAt: customer.updatedAt,
+                    
+                }
+            });
+    
+        } catch (error) {
+            console.error('Error fetching customer by ID:', error);
+            return res.status(500).json({
+                StatusCode: 'ERROR',
+                message: 'Internal Server Error'
+            });
+        }
+    };
+    
 
