@@ -924,7 +924,7 @@ exports.getAllOrders = async (req, res) => {
           attributes: ['CustomerID', 'FirstName', 'LastName', 'Email', 'PhoneNumber']
         }
       ],
-      attributes: ['OrderID', 'OrderNumber', 'OrderStatus', 'StatusID', 'TotalQuantity', 'TotalAmount', 'DeliveryDate', 'Type', 'Comments', 'DesginerName', 'CreatedAt', 'OrderDate', 'StoreID', 'StatusDeliveryDate', 'SubStatusId','UserID' ], 
+      attributes: ['OrderID', 'OrderNumber', 'OrderStatus', 'StatusID', 'TotalQuantity', 'TotalAmount', 'DeliveryDate', 'Type', 'Comments', 'DesginerName', 'CreatedAt', 'OrderDate', 'StoreID', 'StatusDeliveryDate', 'SubStatusId','UserID','ProjectTypeID', 'ReferredByID',"SubReference" ,"ReferedBy"], 
       order: [
         [Sequelize.literal('GREATEST("OrdersTable"."CreatedAt", "OrdersTable"."UpdatedAt")'), 'DESC'],
         ['DesginerName', 'ASC']
@@ -974,6 +974,10 @@ exports.getAllOrders = async (req, res) => {
         DeliveryDate: order.DeliveryDate,
         StatusDeliveryDate: order.StatusDeliveryDate,
         SubStatusId: order.SubStatusId,
+        ReferedBy:order.ReferedBy,
+        SubReference:order.SubReference
+        ProjectTypeID:order.ProjectTypeID,
+        ReferredByID:order.ReferredByID,
         UserID: order.UserID,
         Type: order.Type,
         Comments: order.Comments,
@@ -1046,8 +1050,8 @@ exports.getOrderById = async (req, res) => {
         }
       ],
       attributes: [
-        'OrderID', 'OrderNumber', 'OrderStatus', 'StatusID', 'TotalQuantity', 'TotalAmount', 'DeliveryDate', 'ProjectTypeID', 'ReferredByID', 
-        'Type', 'Comments', 'DesginerName', 'CreatedAt', 'OrderDate', 'StoreID', 'StatusDeliveryDate','ExpectedDurationDays','ReferedBy','AddressID','SubStatusId'
+        'OrderID', 'OrderNumber', 'OrderStatus', 'StatusID', 'TotalQuantity', 'TotalAmount', 'DeliveryDate', 'ProjectTypeID', 'ReferredByID',"SubReference" ,"ReferedBy"
+        'Type', 'Comments', 'DesginerName', 'CreatedAt', 'OrderDate', 'StoreID', 'StatusDeliveryDate','ExpectedDurationDays','ReferedBy','AddressID','SubStatusId',"SubReference"
       ],
     });
 
@@ -1085,8 +1089,10 @@ exports.getOrderById = async (req, res) => {
       ReferedBy: order.ReferedBy,
       CreatedAt: order.CreatedAt,
       SubStatusId:order.SubStatusId,
+      SubStatusId: order.SubStatusId,
+      ReferedBy:order.ReferedBy,
+      SubReference:order.SubReference
       ProjectTypeID:order.ProjectTypeID,
-      ReferredByID:order.ReferredByID,
       StatusDeliveryDate: order.StatusDeliveryDate,
       CustomerID: order.Customer?.CustomerID || null,
       CustomerFirstName: order.Customer?.FirstName|| null,
