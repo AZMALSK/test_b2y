@@ -395,8 +395,22 @@ if (!OrderHistoryID || OrderHistoryID == 0) {
 
      // Increment subStatusId when OrderStatus reaches 11
      if (StatusID === 11) {
-        subStatusId = orderExists.SubStatusId + 1;
+        // Check if there's any previous record with StatusID 11
+        const lastStatus11Record = await OrderHistory.findOne({
+            where: { OrderID, StatusID: 11 },
+            order: [['CreatedAt', 'DESC']],
+        });
+
+        if (!lastStatus11Record) {
+            // First time StatusID 11 is received
+            subStatusId = 1;
+        } else {
+            // Increment the previous SubStatusId
+            subStatusId = lastStatus11Record.SubStatusId + 1;
+        }
     }
+
+  
     
     // Set SubStatusId to 1 if StatusID is 8
     if (StatusID === 8) {
