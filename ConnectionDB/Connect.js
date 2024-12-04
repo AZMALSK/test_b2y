@@ -220,10 +220,7 @@ sequelize.sync({ alter: false }).then(() => {
     console.log('Database & tables created!');
 });
 
-module.exports = { sequelize, CustomerModel,AddressModel,UserManagementModel,StoreModel,RoleModel,
-  OrderTabelModel,ProjectTypeModel,ReferenceModel,HolidayCalendarModel,
-  // NewCityModel,
-  // NewStateModel,
+module.exports = { sequelize, CustomerModel,AddressModel,UserManagementModel,StoreModel,RoleModel,OrderTabelModel,ProjectTypeModel,ReferenceModel,HolidayCalendarModel,
   OrderHistory,Payment,UserAddressModel,MapStoreUser,CityModel,StateModel,CountryModel,EmailTemplate,PermissionsModel,MapRolePermissionsModel,OrderStatusModel,InventoryModel,FeedbackModel};
 
   

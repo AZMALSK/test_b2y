@@ -1,4 +1,4 @@
-const {   UserManagementModel,OrderTabelModel , CustomerModel, AddressModel, Payment,OrderHistory, OrderStatusModel, sequelize ,StoreModel,CityModel,StateModel,CountryModel ,ProjectTypeModel,ReferenceModel, } = require('../ConnectionDB/Connect');
+const {   UserManagementModel,OrderTabelModel , CustomerModel, AddressModel, Payment,OrderHistory, OrderStatusModel, sequelize ,StoreModel,CityModel,StateModel,CountryModel ,ProjectTypeModel,ReferenceModel } = require('../ConnectionDB/Connect');
 const { Sequelize, DataTypes } = require('sequelize');
 const multer = require('multer');
 const { storage } = require('../middleware/Cloundinary');
@@ -372,32 +372,25 @@ exports.createOrderOrUpdate = async (req, res) => {
   // Reference lookup
   let referedBy = null;
   let subReference = null;
-    // let reference = null;
 
-    // if (ReferredByID) {
-    //   reference = await ReferenceModel.findByPk(ReferredByID);
-    //   if (!reference) throw new Error("Reference not found.");
-    // }
+  if (ReferredByID) {
+    const reference = await ReferenceModel.findOne({
+      where: { id: ReferredByID },
+      attributes: ['id', 'name', 'parentId', 'isActive'],
+      include: [
+        {
+          model: ReferenceModel,
+          as: 'parent',
+          attributes: ['name']
+        }
+      ]
+    });
 
-    if (ReferredByID) {
-      const reference = await ReferenceModel.findOne({
-          where: { id: ReferredByID },
-          attributes: ['id', 'name', 'parentId', 'isActive'],
-          include: [
-              {
-                  model: ReferenceModel,
-                  as: 'parent',
-                  attributes: ['name']
-              }
-          ]
-      });
-
-      if (!reference) {
-          return res.status(404).json({ error: 'Invalid ReferredByID' });
-      }
-      //referedBy = reference.parent ? reference.parent.name : reference.name;
-      referedBy = reference.parent ? reference.parent.name : null
-      subReference = reference.name;
+    if (!reference) {
+      return res.status(404).json({ error: 'Invalid ReferredByID' });
+    }
+    referedBy = reference.parent ? reference.parent.name : null;
+    subReference = reference.name;
   }
     let newOrder, operationMessage, emailTemplate, emalilTemplateForUser;
     const updatedStatusDeliveryDate = new Date();
@@ -405,7 +398,17 @@ exports.createOrderOrUpdate = async (req, res) => {
     
     if (OrderID) {
       // Update existing order
-      newOrder = await OrderTabelModel.findOne({ where: { OrderID } });
+      newOrder = await OrderTabelModel.findOne({ 
+        where: { OrderID },
+        include: [
+          {
+            model: ReferenceModel,
+            as: 'ReferredBy',
+            attributes: ['name']
+          }
+        ]
+      });
+
       if (!newOrder) throw new Error("Order not found.");
 
       await newOrder.update({
@@ -425,9 +428,9 @@ exports.createOrderOrUpdate = async (req, res) => {
         ExpectedDurationDays,
         StoreCode,
         SubStatusId,
-        Type: projectType ? projectType.ProjectTypeName : null,
-        ReferedBy: referedBy || (existingCustomer.ReferredBy ? existingCustomer.ReferredBy.name : null),
-        SubReference: subReference || existingCustomer.SubReference || 'self',
+        Type: projectType ? projectType.ProjectTypeName : null, 
+        ReferedBy: referedBy || (newOrder.ReferredBy ? newOrder.ReferredBy.name : null),
+        SubReference: subReference || newOrder.SubReference || 'self',
         ProjectTypeID,
         ReferredByID,
         UpdatedBy: OrderBy,
@@ -975,7 +978,7 @@ exports.getAllOrders = async (req, res) => {
         StatusDeliveryDate: order.StatusDeliveryDate,
         SubStatusId: order.SubStatusId,
         ReferedBy:order.ReferedBy,
-        SubReference:order.SubReference
+        SubReference:order.SubReference,
         ProjectTypeID:order.ProjectTypeID,
         ReferredByID:order.ReferredByID,
         UserID: order.UserID,
@@ -1050,8 +1053,8 @@ exports.getOrderById = async (req, res) => {
         }
       ],
       attributes: [
-        'OrderID', 'OrderNumber', 'OrderStatus', 'StatusID', 'TotalQuantity', 'TotalAmount', 'DeliveryDate', 'ProjectTypeID', 'ReferredByID',"SubReference" ,"ReferedBy"
-        'Type', 'Comments', 'DesginerName', 'CreatedAt', 'OrderDate', 'StoreID', 'StatusDeliveryDate','ExpectedDurationDays','ReferedBy','AddressID','SubStatusId',"SubReference"
+        'OrderID', 'OrderNumber', 'OrderStatus', 'StatusID', 'TotalQuantity', 'TotalAmount', 'DeliveryDate', 'ProjectTypeID', 'ReferredByID','SubReference' ,'ReferedBy',
+        'Type', 'Comments', 'DesginerName', 'CreatedAt', 'OrderDate', 'StoreID', 'StatusDeliveryDate','ExpectedDurationDays','ReferedBy','AddressID','SubStatusId'
       ],
     });
 
@@ -1091,7 +1094,7 @@ exports.getOrderById = async (req, res) => {
       SubStatusId:order.SubStatusId,
       SubStatusId: order.SubStatusId,
       ReferedBy:order.ReferedBy,
-      SubReference:order.SubReference
+      SubReference:order.SubReference,
       ProjectTypeID:order.ProjectTypeID,
       StatusDeliveryDate: order.StatusDeliveryDate,
       CustomerID: order.Customer?.CustomerID || null,
