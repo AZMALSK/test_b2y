@@ -274,15 +274,12 @@ async function sendAssignmentNotification(OrderID, StatusID) {
                 currency: 'INR',
                 minimumFractionDigits: 2,
             }).format(order.TotalAmount).replace('₹', ''),
-            
             // Customer Details
             customerFirstName: order.Customer.FirstName,
             customerEmail: order.Customer.Email,
             customerPhone: order.Customer.PhoneNumber,
-            
             // Store Details
             StoreName: order.StoreTabel.StoreName,
-            
             // Address Details
             DeliveryAddress: formattedAddress,
             AddressLine1: address.AddressLine1,
@@ -291,12 +288,11 @@ async function sendAssignmentNotification(OrderID, StatusID) {
             State: address.State?.StateName,
             ZipCode: address.ZipCode,
             Country: address.Country?.CountryName,
-            
             // Assigned User Details
             assignedUserName: `${orderHistory.AssignedUser.FirstName} ${orderHistory.AssignedUser.LastName}`,
             assignedUserEmail: orderHistory.AssignedUser.Email,
             assignedUserPhone: orderHistory.AssignedUser.PhoneNumber,
-            
+            EndDate:orderHistory.EndDate,
             // Status-specific Details
             Comments: orderHistory.Comments || '',
             DocumentName: documentUrls.length > 0 ? documentUrls.join(', ') : 'No Document',
@@ -397,17 +393,17 @@ if (!OrderHistoryID || OrderHistoryID == 0) {
         }
     }
 
-     // Increment subStatusId when OrderStatus reaches 10
+     // Increment subStatusId when OrderStatus reaches 11
      if (StatusID === 11) {
         subStatusId = orderExists.SubStatusId + 1;
     }
     
-    // Set SubStatusId to 1 if StatusID is 7
+    // Set SubStatusId to 1 if StatusID is 8
     if (StatusID === 8) {
         subStatusId = 1;
     }
 
-    // Handle subStatus assignment for StatusID 5, using SubStatusId of last StatusID 4 record
+    // Handle subStatus assignment for StatusID 6, using SubStatusId of last StatusID 4 record
     if (StatusID === 6) {
         const lastStatus4Record = await OrderHistory.findOne({
             where: { OrderID, StatusID: 4 },
