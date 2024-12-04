@@ -179,25 +179,46 @@ exports.createOrUpdateCustomer = async (req, res) => {
         let referedBy = null;
         let subReference = null;
 
+        // if (ReferredByID) {
+        //     const reference = await ReferenceModel.findOne({
+        //         where: { id: ReferredByID },
+        //         attributes: ['id', 'name', 'parentId', 'isActive'],
+        //         include: [
+        //             {
+        //                 model: ReferenceModel,
+        //                 as: 'parent',
+        //                 attributes: ['name']
+        //             }
+        //         ]
+        //     });
+
+        //     if (!reference) {
+        //         return res.status(404).json({ error: 'Invalid ReferredByID' });
+        //     }
+        //     //referedBy = reference.parent ? reference.parent.name : reference.name;
+        //     referedBy = reference.parent ? reference.parent.name : null
+        //     subReference = reference.name;
+        // }
+
         if (ReferredByID) {
             const reference = await ReferenceModel.findOne({
                 where: { id: ReferredByID },
                 attributes: ['id', 'name', 'parentId', 'isActive'],
-                include: [
-                    {
-                        model: ReferenceModel,
-                        as: 'parent',
-                        attributes: ['name']
-                    }
-                ]
+                include: [{
+                    model: ReferenceModel,
+                    as: 'parent',
+                    attributes: ['name']
+                }]
             });
-
+        
             if (!reference) {
                 return res.status(404).json({ error: 'Invalid ReferredByID' });
             }
-            //referedBy = reference.parent ? reference.parent.name : reference.name;
-            referedBy = reference.parent ? reference.parent.name : null
-            subReference = reference.name;
+        
+            // Set ReferedBy to parent name if exists, otherwise use reference name
+            referedBy = reference.parentId ? reference.parent.name : reference.name;
+            // Set SubReference to reference name if parent exists, otherwise 'self'
+            subReference = reference.parentId ? reference.name : 'self';
         }
 
         if (CustomerID) {
@@ -347,6 +368,16 @@ exports.getAllCustomers = async (req, res) => {
                         { model: CountryModel, as: 'Country', attributes: ['CountryName'] }
                     ]
                 },
+                {
+                    model: ReferenceModel,
+                    as: 'ReferredBy',
+                    attributes: ['id', 'name', 'parentId'],
+                    include: [{
+                        model: ReferenceModel,
+                        as: 'parent',
+                        attributes: ['name']
+                    }]
+                },
                 { model: StoreModel, as: 'Store', attributes: ['StoreCode', 'StoreName', 'StoreID'] }
             ],
             where: whereCondition,
@@ -371,9 +402,13 @@ exports.getAllCustomers = async (req, res) => {
                 Alternative_PhoneNumber: customer.Alternative_PhoneNumber,
                 Gender: customer.Gender,
                 Comments: customer.Comments,
+
                 ReferedBy: customer.ReferedBy,
                 SubReference: customer.SubReference,
-                ReferredByID:customer.ReferredByID,
+                ReferredByID: customer.ReferredByID,
+                ReferenceName: customer.ReferredBy?.name || null,
+                // ParentReferenceName: customer.ReferredBy?.parent?.name || null,
+
                 StoreID: customer.Store.StoreID,
                 StoreCode: customer.Store.StoreCode,
                 StoreName: customer.Store.StoreName,
@@ -410,7 +445,17 @@ exports.getCustomerById = async (req, res) => {
         const customer = await CustomerModel.findOne({
             where: { CustomerID: id },
             include: [{ model: AddressModel, as: 'Address' },
-                      { model: StoreModel, as: 'Store' }   
+                      { model: StoreModel, as: 'Store' },
+                      {
+                        model: ReferenceModel,
+                        as: 'ReferredBy',
+                        attributes: ['id', 'name', 'parentId'],
+                        include: [{
+                            model: ReferenceModel,
+                            as: 'parent',
+                            attributes: ['name']
+                        }]
+                    }   
             ]  
         });
 
@@ -448,9 +493,15 @@ exports.getCustomerById = async (req, res) => {
                 Password: customer.Password,
                 PhoneNumber: customer.PhoneNumber,
                 Alternative_PhoneNumber:customer.PhoneNumber,
-                ReferedBy:customer.ReferedBy,
-                SubReference:customer.SubReference,
+                // ReferedBy:customer.ReferedBy,
+                // SubReference:customer.SubReference,
+
                 ReferredByID:customer.ReferredByID,
+                ReferedBy: customer.ReferedBy,
+                SubReference: customer.SubReference,
+                ReferredByID: customer.ReferredByID,
+                ReferenceName: customer.ReferredBy?.name || null,
+                // ParentReferenceName: customer.ReferredBy?.parent?.name || null,
                 Comments:customer.Comments,
                 Gender: customer.Gender,
                 CreatedBy: customer.CreatedBy,
@@ -662,7 +713,6 @@ exports.getCustomerByIdWithoutAddress = async (req, res) => {
                     
                     ReferredByID: customer.ReferredByID,
                     SubReference: customer.SubReference,
-    
                     Comments: customer.Comments,
                     Gender: customer.Gender,
                     StoreID: customer.StoreID,
