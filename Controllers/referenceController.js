@@ -6,6 +6,20 @@ exports.createReference = async (req, res) => {
     try {
         const { name, parentId, isActive } = req.body;
 
+        // Validate duplicate names in the appropriate scope
+        const existingReference = await ReferenceModel.findOne({
+            where: parentId === 0
+                ? { name, parentId: null } // For parent references
+                : { name, parentId }, // For child references under the same parent
+        });
+
+        if (existingReference) {
+            return res.status(400).json({
+                success: false,
+                message: 'A reference with this name already exists',
+            });
+        }
+
         // If parentId is 0, create a parent reference
         if (parentId === 0) {
             const parentReference = await ReferenceModel.create({
@@ -48,6 +62,7 @@ exports.createReference = async (req, res) => {
         });
     }
 };
+
 // Update Reference
 exports.updateReference = async (req, res) => {
     try {
