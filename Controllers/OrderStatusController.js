@@ -80,7 +80,7 @@ exports.getAllOrderStatus = async (req, res) => {
             limit: parseInt(limit),
             offset: parseInt(offset),
             order: [
-              [Sequelize.literal('GREATEST("OrderStatus"."CreatedAt", "OrderStatus"."UpdatedAt")'), 'DESC'],
+              [Sequelize.literal('GREATEST("OrderStatus"."StatusID", "OrderStatus"."StatusID")'), 'ASC'],
             //   ['OrderStatus', 'ASC']
           ],
             // distinct: true 
