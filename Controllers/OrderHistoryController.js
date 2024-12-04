@@ -482,7 +482,7 @@ if (!OrderHistoryID || OrderHistoryID == 0) {
             // Trigger email logic for certain statuses
             if (StatusID === 6 || StatusID === 12) {
                 console.log(`Triggering email for StatusID ${StatusID}`); 
-                if (StatusID === 5) {
+                if (StatusID === 6) {
                     await triggerStatusEmail(OrderID);
                 // } else if (StatusID === 7) {
                 //     await triggerPaymentEmail(OrderID);
