@@ -50,6 +50,14 @@ module.exports=(sequelize)=>{
                 key: 'id', // Primary key in the Reference table
             },
         },
+        SubReferenceID: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            references: {
+                model: 'Reference',
+                key: 'id'
+            }
+        },
         SubReference:{
             type:DataTypes.STRING(50),
             allowNull:true

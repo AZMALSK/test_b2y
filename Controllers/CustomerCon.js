@@ -166,9 +166,11 @@ exports.createOrUpdateCustomer = async (req, res) => {
         Gender,
         StoreID,
         ReferredByID,
+        SubReferenceID: initialSubReferenceID, 
         CreatedBy,
         UpdatedBy
     } = req.body;
+
 
     try {
         if (!TenantID) {
@@ -178,47 +180,51 @@ exports.createOrUpdateCustomer = async (req, res) => {
         // Reference lookup
         let referedBy = null;
         let subReference = null;
-
-        // if (ReferredByID) {
-        //     const reference = await ReferenceModel.findOne({
-        //         where: { id: ReferredByID },
-        //         attributes: ['id', 'name', 'parentId', 'isActive'],
-        //         include: [
-        //             {
-        //                 model: ReferenceModel,
-        //                 as: 'parent',
-        //                 attributes: ['name']
-        //             }
-        //         ]
-        //     });
-
-        //     if (!reference) {
-        //         return res.status(404).json({ error: 'Invalid ReferredByID' });
-        //     }
-        //     //referedBy = reference.parent ? reference.parent.name : reference.name;
-        //     referedBy = reference.parent ? reference.parent.name : null
-        //     subReference = reference.name;
-        // }
-
-        if (ReferredByID) {
+        let finalSubReferenceID = initialSubReferenceID;
+       
+         // First, handle the main reference lookup
+         if (ReferredByID) {
             const reference = await ReferenceModel.findOne({
                 where: { id: ReferredByID },
                 attributes: ['id', 'name', 'parentId', 'isActive'],
                 include: [{
                     model: ReferenceModel,
                     as: 'parent',
-                    attributes: ['name']
+                    attributes: ['id', 'name']
                 }]
             });
-        
             if (!reference) {
                 return res.status(404).json({ error: 'Invalid ReferredByID' });
             }
-        
-            // Set ReferedBy to parent name if exists, otherwise use reference name
-            referedBy = reference.parentId ? reference.parent.name : reference.name;
-            // Set SubReference to reference name if parent exists, otherwise 'self'
-            subReference = reference.parentId ? reference.name : 'self';
+
+            // If the reference has a parent, it's a sub-reference
+            if (reference.parentId) {
+                referedBy = reference.parent.name;
+                subReference = reference.name;
+            } else {
+                referedBy = reference.name;
+                // Only look up sub-reference if initialSubReferenceID is provided
+                if (initialSubReferenceID) {
+                    const subRef = await ReferenceModel.findOne({
+                        where: { 
+                            id: initialSubReferenceID,
+                            parentId: reference.id  // Ensure it's a child of the main reference
+                        },
+                        attributes: ['id', 'name']
+                    });
+                    if (subRef) {
+                        subReference = subRef.name;
+                        finalSubReferenceID = subRef.id;
+                    } else {
+                        subReference = 'self';
+                        finalSubReferenceID = null;
+                    }
+                } else {
+                    subReference = 'self';
+                    finalSubReferenceID = null;
+                }
+                
+            }
         }
 
         if (CustomerID) {
@@ -246,12 +252,15 @@ exports.createOrUpdateCustomer = async (req, res) => {
                 Password,
                 PhoneNumber,
                 Alternative_PhoneNumber,
-                ReferedBy: referedBy || (existingCustomer.ReferredBy ? existingCustomer.ReferredBy.name : null),
-                SubReference: subReference || existingCustomer.SubReference || 'self',
+                // ReferedBy: referedBy || (existingCustomer.ReferredBy ? existingCustomer.ReferredBy.name : null),
+                // SubReference: subReference || existingCustomer.SubReference || 'self',
                 Comments,
                 Gender,
                 StoreID,
+                ReferedBy: referedBy,
+                SubReference: subReference,
                 ReferredByID,
+                SubReferenceID: finalSubReferenceID,
                 UpdatedAt: new Date(),
                 UpdatedBy
             });
@@ -287,18 +296,21 @@ exports.createOrUpdateCustomer = async (req, res) => {
                     Password,
                     PhoneNumber,
                     Alternative_PhoneNumber,
-                    ReferedBy: referedBy,
-                    SubReference: subReference || 'self',
+                    // ReferedBy: referedBy,
+                    // SubReference: subReference || 'self',
                     Comments,
                     Gender,
                     StoreID,
+                    ReferedBy: referedBy,
+                    SubReference: subReference,
                     ReferredByID,
+                    SubReferenceID: finalSubReferenceID,
                     CreatedBy,
                     CreatedAt: new Date(),
                     UpdatedAt: new Date(),
                     UpdatedBy
                 }, { transaction });
-
+                console.log(newCustomer);
                 const customerNumber = `${storeCode}/${newCustomer.CustomerID}`;
                 await newCustomer.update({ CustomerNumber: customerNumber }, { transaction });
 
@@ -320,6 +332,8 @@ exports.createOrUpdateCustomer = async (req, res) => {
         return res.status(500).json({ error: 'Internal Server Error' });
     }
 };
+
+
 exports.getAllCustomers = async (req, res) => {
     const page = parseInt(req.query.page, 10) || 1;
     const limit = parseInt(req.query.limit, 10) || 10;
@@ -406,6 +420,7 @@ exports.getAllCustomers = async (req, res) => {
                 ReferedBy: customer.ReferedBy,
                 SubReference: customer.SubReference,
                 ReferredByID: customer.ReferredByID,
+                SubReferenceID: customer.SubReferenceID,
                 ReferenceName: customer.ReferredBy?.name || null,
                 // ParentReferenceName: customer.ReferredBy?.parent?.name || null,
 
@@ -500,6 +515,7 @@ exports.getCustomerById = async (req, res) => {
                 ReferedBy: customer.ReferedBy,
                 SubReference: customer.SubReference,
                 ReferredByID: customer.ReferredByID,
+                SubReferenceID: customer.SubReferenceID,
                 ReferenceName: customer.ReferredBy?.name || null,
                 // ParentReferenceName: customer.ReferredBy?.parent?.name || null,
                 Comments:customer.Comments,

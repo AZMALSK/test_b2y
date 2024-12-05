@@ -181,6 +181,10 @@ RoleModel.hasMany(UserManagementModel, { foreignKey: 'RoleID' });
 OrderTabelModel.belongsTo(ProjectTypeModel, {foreignKey: 'ProjectTypeID', as: 'ProjectType',});
 OrderTabelModel.belongsTo(ReferenceModel, {foreignKey: 'ReferredByID', as: 'ReferredBy',});
 
+OrderTabelModel.belongsTo(ReferenceModel, {
+  foreignKey: 'SubReferenceID',
+  as: 'SubReferenceDetails'
+});
 //  Customer and Reference
 ReferenceModel.hasMany(CustomerModel, { 
   foreignKey: 'ReferredByID', 
@@ -190,6 +194,11 @@ ReferenceModel.hasMany(CustomerModel, {
 CustomerModel.belongsTo(ReferenceModel, { 
   foreignKey: 'ReferredByID', 
   as: 'ReferredBy' 
+});
+
+CustomerModel.belongsTo(ReferenceModel, {
+  foreignKey: 'SubReferenceID',
+  as: 'SubReferenceDetails'
 });
 
 // ReferenceModel associations
