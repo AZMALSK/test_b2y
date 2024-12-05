@@ -152,6 +152,13 @@ const Address = require('../Models/Address');
 //     }
 // };
 
+const getNextCustomerSequence = async (transaction) => {
+    const totalCustomers = await CustomerModel.count({
+      transaction
+    });
+    return (totalCustomers + 1).toString().padStart(3, '0'); // Pad to 3 digits
+  };
+
 exports.createOrUpdateCustomer = async (req, res) => {
     const {
         CustomerID,
@@ -252,8 +259,6 @@ exports.createOrUpdateCustomer = async (req, res) => {
                 Password,
                 PhoneNumber,
                 Alternative_PhoneNumber,
-                // ReferedBy: referedBy || (existingCustomer.ReferredBy ? existingCustomer.ReferredBy.name : null),
-                // SubReference: subReference || existingCustomer.SubReference || 'self',
                 Comments,
                 Gender,
                 StoreID,
@@ -287,8 +292,14 @@ exports.createOrUpdateCustomer = async (req, res) => {
                 }
                 const storeCode = store.StoreCode;
 
-                // Create new customer
-                const newCustomer = await CustomerModel.create({
+              // Get the next sequence number
+              const sequenceNumber = await getNextCustomerSequence(transaction);
+                
+              // Generate customer number using IS prefix format
+              const customerNumber = `${storeCode}/${sequenceNumber}`;
+
+              // Create new customer
+              const newCustomer = await CustomerModel.create({
                     TenantID,
                     FirstName,
                     LastName,
@@ -296,12 +307,11 @@ exports.createOrUpdateCustomer = async (req, res) => {
                     Password,
                     PhoneNumber,
                     Alternative_PhoneNumber,
-                    // ReferedBy: referedBy,
-                    // SubReference: subReference || 'self',
                     Comments,
                     Gender,
                     StoreID,
                     ReferedBy: referedBy,
+                    CustomerNumber: customerNumber,
                     SubReference: subReference,
                     ReferredByID,
                     SubReferenceID: finalSubReferenceID,
@@ -310,9 +320,8 @@ exports.createOrUpdateCustomer = async (req, res) => {
                     UpdatedAt: new Date(),
                     UpdatedBy
                 }, { transaction });
-                console.log(newCustomer);
-                const customerNumber = `${storeCode}/${newCustomer.CustomerID}`;
-                await newCustomer.update({ CustomerNumber: customerNumber }, { transaction });
+                // const customerNumber = `${storeCode}/${newCustomer.CustomerID}`;
+                // await newCustomer.update({ CustomerNumber: customerNumber }, { transaction });
 
                 await transaction.commit();
 
