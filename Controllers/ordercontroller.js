@@ -421,6 +421,16 @@ exports.createOrderOrUpdate = async (req, res) => {
             }
         }
 
+          // Logic to check and update customer `isConfirmed` status
+          if (!customer.isConfirmed) {
+            // Count all customers with `isConfirmed: true`
+            const isConfirmedTotalCount = await CustomerModel.count({ where: { isConfirmed: true } });
+      
+            // Update current customer's `isConfirmed` to true
+            const newCustomerNumber = `${customer.CustomerNumber}/${isConfirmedTotalCount + 1}`;
+            await customer.update({ isConfirmed: true, CustomerNumber: newCustomerNumber }, { transaction });
+          }
+
     let newOrder, operationMessage, emailTemplate, emalilTemplateForUser;
     const updatedStatusDeliveryDate = new Date();
     updatedStatusDeliveryDate.setDate(updatedStatusDeliveryDate.getDate() + 3);
