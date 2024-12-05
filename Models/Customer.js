@@ -82,6 +82,11 @@ module.exports=(sequelize)=>{
                 key: 'id'
             }
         },
+        isConfirmed: {
+            type: DataTypes.BOOLEAN,
+            allowNull: false,
+            defaultValue: false,
+        },
         CreatedBy: {
             type: DataTypes.STRING(255),
             allowNull: true
