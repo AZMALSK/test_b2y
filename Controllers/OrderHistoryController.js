@@ -1373,3 +1373,176 @@ exports.getTasksForUser = async (req, res) => {
         });
     }
 };
+
+
+exports.schedulePreDeliveryNotifications = async (req, res) => {
+    try {
+        const targetDeliveryDate = moment().add(6, 'days').startOf('day');
+        //const nextDay = moment().add(7, 'days').startOf('day');
+
+        console.log('Checking orders with delivery date:', targetDeliveryDate.format('YYYY-MM-DD'));
+
+        // Step 1: Find orders nearing delivery
+        const ordersNearingDelivery = await OrderTabelModel.findAll({
+            where: {
+                StatusID: 8,
+                SubStatusId: 3,
+                DeliveryDate: {
+                    [Op.gte]: targetDeliveryDate.toDate(),
+                   // [Op.lt]: nextDay.toDate()
+                }
+            }
+        });
+
+        console.log(`Total orders nearing delivery: ${ordersNearingDelivery.length}`);
+        
+        let successCount = 0;
+        let failedCount = 0;
+
+        // Step 2: Process each order
+        for (const order of ordersNearingDelivery) {
+            try {
+                // Step 3: Fetch order details with store information
+                const orderdata = await OrderTabelModel.findOne({
+                    where: { OrderID: order.OrderID },
+                    include: [
+                        {
+                            model: CustomerModel,
+                            as: 'Customer',
+                            attributes: ['FirstName', 'Email', 'PhoneNumber']
+                        },
+                        {
+                            model: StoreModel,
+                            as: 'StoreTabel',
+                            attributes: ['StoreName']
+                        },
+                        {
+                            model: AddressModel,
+                            as: 'Address',
+                            include: [
+                                { model: CityModel, as: 'City' },
+                                { model: StateModel, as: 'State' },
+                                { model: CountryModel, as: 'Country' }
+                            ]
+                        }
+                    ]
+                });
+
+                // Ensure orderdata and Address exist
+                if (!orderdata || !orderdata.Address) {
+                    console.error(`No address found for Order #${order.OrderNumber}`);
+                    failedCount++;
+                    continue;
+                }
+
+                // Format the address
+                const address = orderdata.Address;
+                const formattedAddress = `${address.AddressLine1}${address.AddressLine2 ? '\n' + address.AddressLine2 : ''}
+                    ${address.City ? address.City.CityName : ''}, 
+                    ${address.State ? address.State.StateName : ''} ${address.ZipCode}
+                    ${address.Country ? address.Country.CountryName : ''}`;
+
+                // Step 4: Fetch order history for the current order
+                const orderHistory = await OrderHistory.findOne({
+                    where: { OrderID: order.OrderID },
+                    order: [['CreatedAt', 'DESC']]
+                });
+
+                if (!orderHistory || !orderHistory.AssignTo) {
+                    console.error(`No AssignTo found in order history for Order #${order.OrderNumber}`);
+                    failedCount++;
+                    continue;
+                }
+
+                // Step 4: Fetch user details using AssignTo
+                const user = await UserManagementModel.findOne({
+                    where: { UserID: orderHistory.AssignTo },
+                    attributes: ['UserID', 'FirstName', 'LastName', 'Email']
+                });
+
+                if (!user) {
+                    console.error(`No user found for Order #${order.OrderNumber} with AssignTo ${orderHistory.AssignTo}`);
+                    failedCount++;
+                    continue;
+                }
+
+                // Log user details
+                console.log(
+                    `User Details: UserID=${user.UserID}, Name=${user.FirstName} ${user.LastName}, Email=${user.Email}`
+                );
+
+                // Step 5: Send pre-delivery notification email
+                await triggerPreDeliveryNotificationEmail(order, user, orderdata, address, formattedAddress);
+                successCount++;
+            } catch (error) {
+                console.error(`Failed to process order ${order.OrderNumber}:`, error);
+                failedCount++;
+            }
+        }
+
+        console.log(`Successfully processed ${successCount} out of ${ordersNearingDelivery.length} pre-delivery notifications`);
+
+        // Step 6: Send response
+        return res.status(200).json({
+            status: 'success',
+            message: 'Pre-delivery notification emails processed',
+            data: {
+                totalOrders: ordersNearingDelivery.length,
+                emailsSent: successCount,
+                emailsFailed: failedCount,
+                processedAt: new Date().toISOString()
+            }
+        });
+    } catch (error) {
+        console.error('FATAL ERROR in pre-delivery notification job:', error);
+        return res.status(500).json({
+            status: 'error',
+            message: 'Failed to process pre-delivery notifications',
+            error: error.message
+        });
+    }
+};
+
+// Email data and trigger emails method
+const triggerPreDeliveryNotificationEmail = async (order, user, orderdata, address, formattedAddress) => {
+    try {
+        // Prepare email data for the assigned user
+        const emailData = {
+            // Order Details
+            OrderNumber: order.OrderNumber,
+            OrderID: order.OrderID,
+            OrderDate: moment(order.CreatedAt).format('MMMM Do, YYYY'),
+            DeliveryDate: moment(order.DeliveryDate).format('MMMM Do, YYYY'),
+            // Customer Details
+            customerFirstName: orderdata.Customer.FirstName,
+            customerEmail: orderdata.Customer.Email,
+            customerPhone: orderdata.Customer.PhoneNumber,
+            // Address Details
+            DeliveryAddress: formattedAddress,
+            AddressLine1: address.AddressLine1,
+            AddressLine2: address.AddressLine2,
+            City: address.City?.CityName,
+            State: address.State?.StateName,
+            ZipCode: address.ZipCode,
+            Country: address.Country?.CountryName,
+            // Store Details
+            StoreName: orderdata.StoreTabel ? orderdata.StoreTabel.StoreName : 'Unknown Store',
+            // Assigned User Details
+            assignedUserName: `${user.FirstName} ${user.LastName}`,
+            assignedUserEmail: user.Email,
+            // Pre-Delivery Information
+            PreDeliveryInstructions: 'Production will completed in 7days, and the order will be ready for PDI (Pre-Delivery Inspection) within the next 7 days.'
+        };
+
+        console.log('Sending pre-delivery notification email with the following data:', emailData);
+
+        const templateName = 'PreDeliveryNotificationForUser';
+        // Send email using template
+        await sendTemplateEmailForUser(templateName, emailData);
+
+        console.log(`Pre-delivery notification sent to ${emailData.assignedUserEmail} for Order #${order.OrderNumber}`);
+    } catch (error) {
+        console.error(`Error sending pre-delivery notification for Order #${order.OrderNumber}:`, error);
+        throw error;
+    }
+};

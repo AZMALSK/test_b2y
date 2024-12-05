@@ -18,6 +18,8 @@ const DashboardRoutes = require('./Routes/Routes');
 const ProjectTypeRoutes = require('./Routes/Routes');
 const referenceRoutes = require('./Routes/Routes');
 const holidayCalenderRoutes = require('./Routes/Routes');
+const {initializeCronJobs} = require('./middleware/cronJobs');
+
 
 const cors = require('cors');
 const authRoutes = require('./Routes/Routes');
@@ -34,6 +36,9 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 // Middleware
 app.use(express.json());
 
+//console.log('initializeCronJobs function imported:', typeof (initializeCronJobs));
+// Initialize cron jobs
+initializeCronJobs();
 
   
 // Authentication routes
@@ -70,6 +75,7 @@ app.use((err, req, res, next) => {
 // Start the server
 app.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`);
+    console.log('Cron jobs initialized');
 });
 
 
