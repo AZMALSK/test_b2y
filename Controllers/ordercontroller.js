@@ -524,8 +524,9 @@ exports.createOrderOrUpdate = async (req, res) => {
 
       // Construct and update OrderNumber
       const orderNumber = `${StoreCode}/${newOrder.OrderID}`;
+      // CusNumber = `${}/${}`;
       await newOrder.update({ OrderNumber: orderNumber }, { transaction });
-
+      // await NewCustomerNumber.update({CustomerNuber :CusNumber })
       operationMessage = 'Order created successfully';
       emailTemplate = 'CreateOrder';  // Use a create-specific email template
       emalilTemplateForUser = 'OrderAssignment';
@@ -1113,7 +1114,7 @@ exports.getOrderById = async (req, res) => {
         }
       ],
       attributes: [
-        'OrderID', 'OrderNumber', 'OrderStatus', 'StatusID', 'TotalQuantity', 'TotalAmount', 'DeliveryDate', 'ProjectTypeID', 'ReferredByID','SubReference' ,'ReferedBy',
+        'OrderID', 'OrderNumber', 'OrderStatus', 'StatusID', 'TotalQuantity', 'TotalAmount', 'DeliveryDate', 'ProjectTypeID', 'ReferredByID','SubReference' ,'ReferedBy','SubReferenceID',
         'Type', 'Comments', 'DesginerName', 'CreatedAt', 'OrderDate', 'StoreID', 'StatusDeliveryDate','ExpectedDurationDays','ReferedBy','AddressID','SubStatusId'
       ],
     });
