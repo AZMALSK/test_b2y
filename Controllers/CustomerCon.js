@@ -722,13 +722,11 @@ exports.getCustomerByIdWithoutAddress = async (req, res) => {
                     Password: customer.Password,
                     PhoneNumber: customer.PhoneNumber,
                     Alternative_PhoneNumber: customer.Alternative_PhoneNumber,
-                    
-                    ParentReferenceID: referenceDetails.parentId,
+                    ReferredByID:customer.ReferredByID,
                     ReferedBy: customer.ReferedBy,
-    
-                    
-                    ReferredByID: customer.ReferredByID,
                     SubReference: customer.SubReference,
+                    ReferredByID: customer.ReferredByID,
+                    SubReferenceID: customer.SubReferenceID,
                     Comments: customer.Comments,
                     Gender: customer.Gender,
                     StoreID: customer.StoreID,
