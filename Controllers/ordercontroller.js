@@ -1153,10 +1153,10 @@ exports.getOrderById = async (req, res) => {
       // ReferedBy:order.ReferedBy,
       // SubReference:order.SubReference,
 
-      ReferedBy: customer.ReferedBy,
-      SubReference: customer.SubReference,
-      ReferredByID: customer.ReferredByID,
-      ReferenceName: customer.ReferredBy?.name || null,
+      ReferedBy: order.ReferedBy,
+      SubReference: order.SubReference,
+      ReferredByID: order.ReferredByID,
+      ReferenceName: order.ReferredBy?.name || null,
       // ParentReferenceName: customer.ReferredBy?.parent?.name || null,
 
       ProjectTypeID:order.ProjectTypeID,
