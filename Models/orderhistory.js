@@ -48,6 +48,14 @@ module.exports = (sequelize) => {
             type: DataTypes.INTEGER,
             allowNull: true,
         }, 
+        SubUserID: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            references: {
+                model: 'UserManagement',
+                key: 'UserID'
+            }
+        }, 
         StoreID: {
             type: DataTypes.INTEGER,
             allowNull: true,

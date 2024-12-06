@@ -157,6 +157,10 @@ RoleModel.hasMany(OrderHistory, { foreignKey: 'UserRoleID' });
 OrderHistory.belongsTo(UserManagementModel, { foreignKey: 'AssignTo', as: 'AssignedUser' });
 UserManagementModel.hasMany(OrderHistory, { foreignKey: 'AssignTo' });
 
+// OrderHistory to Sub Users
+OrderHistory.belongsTo(UserManagementModel, { foreignKey: 'SubUserID', as: 'SubUser' });
+UserManagementModel.hasMany(OrderHistory, { foreignKey: 'SubUserID' });
+
 //Stores to Payemnts
 StoreModel.hasMany(Payment, {foreignKey: 'StoreID',as: 'Payments'});
 Payment.belongsTo(StoreModel, {foreignKey: 'StoreID',as: 'StoreTabel'});
@@ -225,7 +229,7 @@ sequelize.authenticate()
   });
 
   // Sync models
-sequelize.sync({ alter: false }).then(() => {
+sequelize.sync({ alter: true }).then(() => {
     console.log('Database & tables created!');
 });
 
