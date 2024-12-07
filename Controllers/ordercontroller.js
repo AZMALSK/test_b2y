@@ -1433,46 +1433,122 @@ exports.getOrderById = async (req, res) => {
 
 
 // Function to update sub-order status
+// exports.updateSubOrderStatus = async (req, res) => {
+//   let { OrderID, SubStatusId } = req.body;
+
+//   SubStatusId = parseInt(SubStatusId,10);
+
+//   if (!OrderID || !SubStatusId) {
+//     return res.status(400).json({ error: 'OrderID and SubStatusId are required.' });
+//   }
+
+//   try {
+//     // Find the order by OrderID
+//     const order = await OrderTabelModel.findOne({ where: { OrderID: OrderID } });
+
+//     if (!order) {
+//       return res.status(404).json({ error: 'Order not found.' });
+//     }
+
+//     // Update SubStatusId and SubStatusUpdatedDate
+//     await order.update({
+//       SubStatusId: SubStatusId,
+//       SubStatusUpdatedDate: new Date(), 
+//     });
+
+//     // Check if SubStatusId is 3 to trigger the payment email notification
+//     if (SubStatusId === 3) {
+//       await triggerPaymentEmail(OrderID);
+//     }
+
+//     return res.status(200).json({
+//       StatusCode: 'SUCCESS',
+//       message: 'Order sub-status updated successfully',
+//       data: order
+//     });
+
+//   } catch (error) {
+//     console.error('Error updating sub-status:', error);
+//     res.status(500).json({ error: 'Internal Server Error' });
+//   }
+// };
+
+
 exports.updateSubOrderStatus = async (req, res) => {
-  let { OrderID, SubStatusId } = req.body;
-
-  SubStatusId = parseInt(SubStatusId,10);
-
+  let { OrderID, SubStatusId, SubUserID } = req.body;
+  
+  SubStatusId = parseInt(SubStatusId, 10);
+  
   if (!OrderID || !SubStatusId) {
     return res.status(400).json({ error: 'OrderID and SubStatusId are required.' });
   }
 
   try {
-    // Find the order by OrderID
-    const order = await OrderTabelModel.findOne({ where: { OrderID: OrderID } });
+    // Start a transaction
+    const result = await sequelize.transaction(async (t) => {
+      // Find the order by OrderID
+      const order = await OrderTabelModel.findOne({ 
+        where: { OrderID: OrderID },
+        transaction: t
+      });
 
-    if (!order) {
-      return res.status(404).json({ error: 'Order not found.' });
-    }
+      if (!order) {
+        throw new Error('Order not found.');
+      }
 
-    // Update SubStatusId and SubStatusUpdatedDate
-    await order.update({
-      SubStatusId: SubStatusId,
-      SubStatusUpdatedDate: new Date(), 
+      // Update order's SubStatusId and SubStatusUpdatedDate
+      await order.update({
+        SubStatusId: SubStatusId,
+        SubStatusUpdatedDate: new Date(),
+      }, { transaction: t });
+
+      // Find the specific OrderHistory entry with StatusID 8
+      const orderHistory = await OrderHistory.findOne({
+        where: {
+          OrderID: OrderID,
+          StatusID: 8
+        },
+        include: [{
+          model: UserManagementModel,
+          as: 'SubUser',
+          attributes: ['UserID', 'FirstName', 'LastName']
+        }],
+        transaction: t
+      });
+
+      if (orderHistory) {
+        // Update the found OrderHistory record
+        await orderHistory.update({
+          SubUserID: SubUserID,
+          UpdatedAt: new Date(),
+          UpdatedBy: req.user?.UserID || 'SYSTEM'
+        }, { transaction: t });
+      } else {
+        console.log(`No OrderHistory record found with StatusID 8 for OrderID: ${OrderID}`);
+      }
+
+      return order;
     });
 
-    // Check if SubStatusId is 3 to trigger the payment email notification
+    // If SubStatusId is 3, trigger the payment email notification
     if (SubStatusId === 3) {
       await triggerPaymentEmail(OrderID);
     }
 
     return res.status(200).json({
       StatusCode: 'SUCCESS',
-      message: 'Order sub-status updated successfully',
-      data: order
+      message: 'Order sub-status and history updated successfully',
+      data: result
     });
 
   } catch (error) {
     console.error('Error updating sub-status:', error);
-    res.status(500).json({ error: 'Internal Server Error' });
+    if (error.message === 'Order not found.') {
+      return res.status(404).json({ error: error.message });
+    }
+    return res.status(500).json({ error: 'Internal Server Error' });
   }
 };
-
 // Function to handle the email notification for StatusID 11
 async function triggerPaymentEmail(OrderID) {
     try {

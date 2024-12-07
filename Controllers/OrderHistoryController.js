@@ -1181,10 +1181,9 @@ exports.checkPaymentStatusAndSendEmail = async (req, res) => {
 
 // Function to update sub-order status
 exports.updateProgressStatus = async (req, res) => {
-    let { OrderHistoryID, ProgressId, SubUserID } = req.body;
+    let { OrderHistoryID, ProgressId } = req.body;
   
     ProgressId = parseInt(ProgressId,10);
-    SubUserID = parseInt(SubUserID,10);
     
     if (!OrderHistoryID || !ProgressId) {
       return res.status(400).json({ error: 'OrderID and ProgressId are required.' });
@@ -1201,7 +1200,6 @@ exports.updateProgressStatus = async (req, res) => {
       // Update SubStatusId and SubStatusUpdatedDate
       await orderHistory.update({
         ProgressId: ProgressId,
-        SubUserID:SubUserID
         // SubStatusUpdatedDate: new Date(), 
       });
   
