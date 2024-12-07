@@ -229,7 +229,7 @@ sequelize.authenticate()
   });
 
   // Sync models
-sequelize.sync({ alter: true }).then(() => {
+sequelize.sync({ alter: false }).then(() => {
     console.log('Database & tables created!');
 });
 

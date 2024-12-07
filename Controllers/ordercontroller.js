@@ -896,12 +896,196 @@ exports.GetSaleOrderReport = async (req, res) => {
 
 
 
+// exports.getAllOrders = async (req, res) => {
+//   const { 
+//     pageNumber, 
+//     pageSize, 
+//     searchText = '', 
+//     StoreIDs, // Array of Store IDs
+//     StatusID, 
+//     SubStatusId,
+//     StartDate, 
+//     EndDate, 
+//     OntimeorDelay 
+//   } = req.query;
+
+//   try {
+//     // Initialize query object
+//     let queryConditions = {};
+
+//     // Apply search text filter (on OrderNumber, DesignerName, Customer FirstName, or LastName)
+//     if (searchText) {
+//       queryConditions = {
+//         ...queryConditions,
+//         [Op.or]: [
+//           { OrderNumber: { [Op.iLike]: `%${searchText}%` } },
+//           { DesginerName: { [Op.iLike]: `%${searchText}%` } },
+//           { '$Customer.FirstName$': { [Op.iLike]: `%${searchText}%` } }, 
+//           { '$Customer.LastName$': { [Op.iLike]: `%${searchText}%` } },  
+//         ]
+//       };
+//     }
+
+//     // Apply StoreIDs filter (handle array)
+//     if (StoreIDs && StoreIDs.length > 0) {
+//       const storeIdsArray = Array.isArray(StoreIDs) ? StoreIDs : StoreIDs.split(','); // Ensure it's an array
+//       queryConditions = { 
+//         ...queryConditions, 
+//         StoreID: { [Op.in]: storeIdsArray } // Use [Op.in] to filter by array of StoreIDs
+//       };
+//     }
+
+//     // Apply StatusID filter
+//     if (StatusID && StatusID > 0) {
+//       queryConditions = {
+//         ...queryConditions,
+//         StatusID: StatusID
+//       };
+//     }
+
+//     // Apply SubStatusId filter
+//     if (SubStatusId && SubStatusId > 0) {
+//       queryConditions = {
+//         ...queryConditions,
+//         SubStatusId: SubStatusId
+//       };
+//     }
+
+//     // Apply date range filter
+//     if (StartDate && EndDate) {
+//       const startDate = moment(StartDate).startOf('day').toDate();
+//       const endDate = moment(EndDate).endOf('day').toDate();
+//       queryConditions = {
+//         ...queryConditions,
+//         CreatedAt: { [Op.between]: [startDate, endDate] }
+//       };
+//     }
+
+//     // Get total count for pagination
+//     const totalCount = await OrderTabelModel.count({
+//       where: queryConditions,
+//       include: [{ model: CustomerModel, as: 'Customer' }]
+//     });
+
+//     // Initialize options for the query
+//     let options = {
+//       where: queryConditions,
+//       include: [
+//         {
+//           model: CustomerModel, as: 'Customer',
+//           attributes: ['CustomerID', 'FirstName', 'LastName', 'Email', 'PhoneNumber']
+//         },
+//         {
+//           model: ReferenceModel,
+//           as: 'ReferredBy',
+//           attributes: ['id', 'name', 'parentId'],
+//           include: [{
+//               model: ReferenceModel,
+//               as: 'parent',
+//               attributes: ['name']
+//           }]
+//       }
+//       ],
+//       attributes: ['OrderID', 'OrderNumber', 'OrderStatus', 'StatusID', 'TotalQuantity', 'TotalAmount', 'DeliveryDate', 'Type', 'Comments', 'DesginerName', 'CreatedAt', 'OrderDate', 'StoreID', 'StatusDeliveryDate', 'SubStatusId','UserID','ProjectTypeID', 'ReferredByID',"SubReference" ,"ReferedBy"], 
+//       order: [
+//         [Sequelize.literal('GREATEST("OrdersTable"."CreatedAt", "OrdersTable"."UpdatedAt")'), 'DESC'],
+//         ['DesginerName', 'ASC']
+//       ],
+//       distinct: true
+//     };
+
+//     // Apply pagination if pageNumber and pageSize are provided
+//     if (pageNumber && pageSize) {
+//       const offset = (parseInt(pageNumber, 10) - 1) * parseInt(pageSize, 10);
+//       options = {
+//         ...options,
+//         limit: parseInt(pageSize, 10),
+//         offset: offset
+//       };
+//     }
+
+//     const orders = await OrderTabelModel.findAndCountAll(options);
+    
+//     // Calculate payments and balance for each order
+//     const modifiedOrders = await Promise.all(orders.rows.map(async (order) => {
+//       const payments = await Payment.findAll({
+//         where: { OrderID: order.OrderID }
+//       });
+
+//       const totalAdvanceAmount = payments.reduce((sum, payment) => sum + parseFloat(payment.Amount), 0);
+//       const totalAmount = parseFloat(order.TotalAmount);
+//       const balanceAmount = totalAmount - totalAdvanceAmount;
+
+//       const statusDeliveryDate = moment(order.StatusDeliveryDate);
+//       const today = moment().startOf('day');
+//       const isDelayed = statusDeliveryDate.isBefore(today) ? 2 : 1;
+
+//       if (OntimeorDelay && parseInt(OntimeorDelay) !== isDelayed) {
+//         return null;
+//       }
+
+//       return {
+//         OrderID: order.OrderID,
+//         OrderNumber: order.OrderNumber,
+//         OrderStatus: order.OrderStatus,
+//         StatusID: order.StatusID,
+//         TotalQuantity: order.TotalQuantity,
+//         TotalAmount: totalAmount.toFixed(2),
+//         AdvanceAmount: totalAdvanceAmount.toFixed(2),
+//         BalanceAmount: balanceAmount.toFixed(2),
+//         DeliveryDate: order.DeliveryDate,
+//         StatusDeliveryDate: order.StatusDeliveryDate,
+//         SubStatusId: order.SubStatusId,
+//         // ReferedBy:order.ReferedBy,
+//         // SubReference:order.SubReference,
+//         ProjectTypeID:order.ProjectTypeID,
+//         ReferredByID:order.ReferredByID,
+//         ReferedBy: order.ReferedBy,
+//         SubReference: order.SubReference,
+//         ReferredByID: order.ReferredByID,
+//         SubReferenceID: order.SubReferenceID,
+//         ReferenceName: order.ReferredBy?.name || null,
+//         ParentReferenceName: order.ReferredBy?.parent?.name || null,
+
+//         UserID: order.UserID,
+//         Type: order.Type,
+//         Comments: order.Comments,
+//         DesginerName: order.DesginerName,
+//         OrderDate: order.OrderDate,
+//         StoreID: order.StoreID,
+//         CustomerName: `${order.Customer.FirstName} ${order.Customer.LastName}`, 
+//         Email: order.Customer.Email, 
+//         Phone: order.Customer.PhoneNumber, 
+//         CustomerID: order.Customer.CustomerID,
+//         OntimeorDelay: isDelayed,
+//       };
+//     }));
+
+//     const filteredOrders = modifiedOrders.filter(order => order !== null);
+//     const totalPages = pageNumber && pageSize ? Math.ceil(totalCount / pageSize) : null;
+
+//     res.status(200).json({
+//       StatusCode: 'SUCCESS',
+//       message: 'Orders fetched successfully',
+//       totalRecords: filteredOrders.length,
+//       totalPages,
+//       totalItems: totalCount,
+//       currentPage: pageNumber ? parseInt(pageNumber, 10) : null,
+//       data: filteredOrders
+//     });
+
+//   } catch (error) {
+//     console.error('Error fetching all orders:', error);
+//     res.status(500).json({ error: 'Internal Server Error' });
+//   }
+// };
+
 exports.getAllOrders = async (req, res) => {
   const { 
     pageNumber, 
     pageSize, 
     searchText = '', 
-    StoreIDs, // Array of Store IDs
+    StoreIDs,
     StatusID, 
     SubStatusId,
     StartDate, 
@@ -910,8 +1094,9 @@ exports.getAllOrders = async (req, res) => {
   } = req.query;
 
   try {
-    // Initialize query object
+    // Previous query conditions remain the same...
     let queryConditions = {};
+    
 
     // Apply search text filter (on OrderNumber, DesignerName, Customer FirstName, or LastName)
     if (searchText) {
@@ -961,18 +1146,21 @@ exports.getAllOrders = async (req, res) => {
       };
     }
 
+    // ... (keep all the existing query condition logic)
+
     // Get total count for pagination
     const totalCount = await OrderTabelModel.count({
       where: queryConditions,
       include: [{ model: CustomerModel, as: 'Customer' }]
     });
 
-    // Initialize options for the query
+    // Modify the include array to include UserManagement model
     let options = {
       where: queryConditions,
       include: [
         {
-          model: CustomerModel, as: 'Customer',
+          model: CustomerModel, 
+          as: 'Customer',
           attributes: ['CustomerID', 'FirstName', 'LastName', 'Email', 'PhoneNumber']
         },
         {
@@ -984,9 +1172,14 @@ exports.getAllOrders = async (req, res) => {
               as: 'parent',
               attributes: ['name']
           }]
-      }
+        }
       ],
-      attributes: ['OrderID', 'OrderNumber', 'OrderStatus', 'StatusID', 'TotalQuantity', 'TotalAmount', 'DeliveryDate', 'Type', 'Comments', 'DesginerName', 'CreatedAt', 'OrderDate', 'StoreID', 'StatusDeliveryDate', 'SubStatusId','UserID','ProjectTypeID', 'ReferredByID',"SubReference" ,"ReferedBy"], 
+      attributes: [
+        'OrderID', 'OrderNumber', 'OrderStatus', 'StatusID', 'TotalQuantity', 
+        'TotalAmount', 'DeliveryDate', 'Type', 'Comments', 'DesginerName', 
+        'CreatedAt', 'OrderDate', 'StoreID', 'StatusDeliveryDate', 'SubStatusId',
+        'UserID', 'ProjectTypeID', 'ReferredByID', "SubReference", "ReferedBy"
+      ],
       order: [
         [Sequelize.literal('GREATEST("OrdersTable"."CreatedAt", "OrdersTable"."UpdatedAt")'), 'DESC'],
         ['DesginerName', 'ASC']
@@ -994,7 +1187,7 @@ exports.getAllOrders = async (req, res) => {
       distinct: true
     };
 
-    // Apply pagination if pageNumber and pageSize are provided
+    // Apply pagination if provided
     if (pageNumber && pageSize) {
       const offset = (parseInt(pageNumber, 10) - 1) * parseInt(pageSize, 10);
       options = {
@@ -1005,6 +1198,29 @@ exports.getAllOrders = async (req, res) => {
     }
 
     const orders = await OrderTabelModel.findAndCountAll(options);
+
+    // Get all relevant OrderHistory entries with StatusID = 8
+    const orderHistoryEntries = await OrderHistory.findAll({
+      where: {
+        OrderID: orders.rows.map(order => order.OrderID),
+        StatusID: 8
+      },
+      include: [{
+        model: UserManagementModel,
+        as: 'SubUser',
+        attributes: ['UserID', 'FirstName', 'LastName'],
+        required: false
+      }]
+    });
+
+    // Create a map for quick lookup
+    const orderHistoryMap = orderHistoryEntries.reduce((acc, history) => {
+      acc[history.OrderID] = {
+        SubUserID: history.SubUserID,
+        SubUserName: history.SubUser ? `${history.SubUser.FirstName} ${history.SubUser.LastName}` : null
+      };
+      return acc;
+    }, {});
     
     // Calculate payments and balance for each order
     const modifiedOrders = await Promise.all(orders.rows.map(async (order) => {
@@ -1024,6 +1240,9 @@ exports.getAllOrders = async (req, res) => {
         return null;
       }
 
+      // Get SubUser information from the map
+      const historyInfo = orderHistoryMap[order.OrderID] || {};
+
       return {
         OrderID: order.OrderID,
         OrderNumber: order.OrderNumber,
@@ -1036,28 +1255,26 @@ exports.getAllOrders = async (req, res) => {
         DeliveryDate: order.DeliveryDate,
         StatusDeliveryDate: order.StatusDeliveryDate,
         SubStatusId: order.SubStatusId,
-        // ReferedBy:order.ReferedBy,
-        // SubReference:order.SubReference,
-        ProjectTypeID:order.ProjectTypeID,
-        ReferredByID:order.ReferredByID,
+        ProjectTypeID: order.ProjectTypeID,
+        ReferredByID: order.ReferredByID,
         ReferedBy: order.ReferedBy,
         SubReference: order.SubReference,
-        ReferredByID: order.ReferredByID,
-        SubReferenceID: order.SubReferenceID,
         ReferenceName: order.ReferredBy?.name || null,
         ParentReferenceName: order.ReferredBy?.parent?.name || null,
-
         UserID: order.UserID,
         Type: order.Type,
         Comments: order.Comments,
         DesginerName: order.DesginerName,
         OrderDate: order.OrderDate,
         StoreID: order.StoreID,
-        CustomerName: `${order.Customer.FirstName} ${order.Customer.LastName}`, 
-        Email: order.Customer.Email, 
-        Phone: order.Customer.PhoneNumber, 
+        CustomerName: `${order.Customer.FirstName} ${order.Customer.LastName}`,
+        Email: order.Customer.Email,
+        Phone: order.Customer.PhoneNumber,
         CustomerID: order.Customer.CustomerID,
         OntimeorDelay: isDelayed,
+        // Add SubUser information
+        SubUserID: historyInfo.SubUserID || null,
+        SubUserName: historyInfo.SubUserName || null
       };
     }));
 
@@ -1079,8 +1296,6 @@ exports.getAllOrders = async (req, res) => {
     res.status(500).json({ error: 'Internal Server Error' });
   }
 };
-
-
 
 exports.getOrderById = async (req, res) => {
   const { OrderID } = req.params;
