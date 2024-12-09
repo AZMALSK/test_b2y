@@ -19,6 +19,8 @@ const ProjectTypeRoutes = require('./Routes/Routes');
 const referenceRoutes = require('./Routes/Routes');
 const holidayCalenderRoutes = require('./Routes/Routes');
 const {initializeCronJobs} = require('./middleware/cronJobs');
+const chatbotRoutes = require('./Routes/Routes');
+
 
 
 const cors = require('cors');
@@ -64,7 +66,8 @@ app.use('/api/Dashboard', DashboardRoutes);
 app.use('/api/ProjectTypeRoutes',ProjectTypeRoutes);
 app.use('/api/referenceRoutes',referenceRoutes);
 app.use('/api/holidayCalender',holidayCalenderRoutes);
-
+app.use('/api/auth', chatbotRoutes);
+  
 
 // Error Handling Middleware
 app.use((err, req, res, next) => {

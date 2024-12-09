@@ -43,6 +43,10 @@ module.exports=(sequelize)=>{
             type:DataTypes.STRING,
             allowNull:false
         },
+        CustomerStoreCode:{
+            type:DataTypes.STRING,
+            allowNull:true
+        },
         StateID:{
             type:DataTypes.INTEGER,
             allowNull:false

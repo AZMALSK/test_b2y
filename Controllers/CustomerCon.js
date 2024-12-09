@@ -290,7 +290,7 @@ exports.createOrUpdateCustomer = async (req, res) => {
                     await transaction.rollback();
                     return res.status(404).json({ error: 'Store not found' });
                 }
-                const storeCode = store.StoreCode;
+                const storeCode = store.CustomerStoreCode;
 
               // Get the next sequence number
               const sequenceNumber = await getNextCustomerSequence(transaction);

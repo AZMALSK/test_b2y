@@ -16,7 +16,7 @@ const DashboardController=require('../Controllers/DashboardController');
 const ProjectTypeController=require('../Controllers/ProjectTypeController');
 const referenceController = require('../Controllers/referenceController');
 const HolidayCalendarController = require('../Controllers/HolidayCalendarController');
-
+const { handleChatQuery } = require('../Controllers/ChatbotController');
 const { createOrderOrUpdate,updateOrder,getOrderById,deleteOrderById,getAllOrders,GetSaleOrderReport,updateSubOrderStatus,triggerAdvanceMeasurementPaymentEmail} = require('../Controllers/ordercontroller');
 const { getAllPayments, getPaymentById,getPaymentByPaymentId,createOrUpdatePayment } = require('../Controllers/PaymentController'); 
 const { getAllOrderHistories, getOrderHistoryById,getOrderHistoryByOrderHistoryId,createOrUpdateOrderHistory,getOrderHistoryDocument,getusertasks,updateFinalMeasurementStatus,checkStatusAndSendEmail,checkPaymentStatusAndSendEmail,updateProgressStatus ,getTasksForUser,schedulePreDeliveryNotifications} = require('../Controllers/OrderHistoryController'); 
@@ -71,8 +71,6 @@ router.get('/getAllOrders', getAllOrders);
 router.post('/GetSaleOrderReport',GetSaleOrderReport);
 router.post('/updateSubOrderStatus',updateSubOrderStatus);
 router.post('/triggerAdvanceMeasurementPaymentEmail',triggerAdvanceMeasurementPaymentEmail);
-
-
 
 
 //Routes for Roles
@@ -168,6 +166,7 @@ router.get('/getByIdReferences/:id', referenceController.getById); // Get by ID 
 //routes for HolidayCalendarModel
 router.get('/listHolidays',HolidayCalendarController.listHolidays);
 
+router.post('/chat', handleChatQuery);
 
 
 
