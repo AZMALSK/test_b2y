@@ -182,6 +182,9 @@ const fetchDataForIntent = async (intent, params) => {
 
 
 // Chatbot Controller
+
+
+// Chatbot Controller with Friendly Responses
 const handleChatQuery = async (req, res) => {
   const { message } = req.body;
 
@@ -190,33 +193,50 @@ const handleChatQuery = async (req, res) => {
   }
 
   try {
+    // Friendly greeting detection
+    const greetingKeywords = ['hi', 'hello', 'hey', 'good morning', 'good evening', 'how are you'];
+    const lowerCaseMessage = message.toLowerCase();
+
+    if (greetingKeywords.some(keyword => lowerCaseMessage.includes(keyword))) {
+      return res.send({
+        reply: `Hi there! 👋 How can I assist you today? Feel free to ask about customers, orders, or users!`
+      });
+    }
+
+    // Process the user's query
     const queryAnalysis = await processQuery(message);
 
     if (!queryAnalysis.intent) {
       return res.send({ 
-        reply: "Sorry, I couldn't understand your query. Try asking about specific customers, orders, or users." 
+        reply: "I'm here to help! Could you try asking about specific customers, orders, or users? 😊" 
       });
     }
 
+    // Fetch the relevant data based on the intent
     const responseData = await fetchDataForIntent(queryAnalysis.intent, queryAnalysis.params);
 
     if (!responseData || responseData.length === 0) {
       return res.send({ 
-        reply: `No ${queryAnalysis.intent} found matching your criteria.` 
+        reply: `Hmm, I couldn't find any ${queryAnalysis.intent} matching your criteria. Want to refine your query? 🤔`
       });
     }
 
+    // Format and send the response
     const formattedResponse = formatResponseData(responseData, queryAnalysis.intent);
-    res.send({ reply: formattedResponse });
+    res.send({ 
+      reply: `Here’s what I found for your ${queryAnalysis.intent} query:`,
+      data: formattedResponse 
+    });
 
   } catch (error) {
     console.error('Chatbot error:', error);
     res.status(500).send({ 
-      error: 'Failed to handle the query.',
+      error: 'Oops! Something went wrong while processing your query. 😓',
       details: error.message 
     });
   }
 };
+
 
 
 
