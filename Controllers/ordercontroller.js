@@ -425,16 +425,27 @@ exports.createOrderOrUpdate = async (req, res) => {
             }
         }
 
-          // Logic to check and update customer `isConfirmed` status
-          if (!customer.isConfirmed) {
-            // Count all customers with `isConfirmed: true`
-            const isConfirmedTotalCount = await CustomerModel.count({ where: { isConfirmed: true } });
-      
-            // Update current customer's `isConfirmed` to true
-            const newCustomerNumber = `${customer.CustomerNumber}/${isConfirmedTotalCount + 1}`;
-            await customer.update({ isConfirmed: true, CustomerNumber: newCustomerNumber }, { transaction });
-          }
+     // Logic to check and update customer `isConfirmed` status and `CustomerNumber` prefix
+    if (!customer.isConfirmed) {
+       // Count all customers with `isConfirmed: true`
+       const isConfirmedTotalCount = await CustomerModel.count({
+      where: { isConfirmed: true },
+    });
 
+     // Update current customer's `isConfirmed` to true
+       const newCustomerNumber = `${customer.CustomerNumber}/${isConfirmedTotalCount + 1}`;
+       await customer.update(
+       { isConfirmed: true, CustomerNumber: newCustomerNumber },
+       { transaction }
+      );
+    }
+
+    // Ensure prefix of `CustomerNumber` is updated from `IS` to `IM`
+    const updatedCustomerNumber = customer.CustomerNumber.replace(/^IS/, "IM");
+    await customer.update({ CustomerNumber: updatedCustomerNumber }, { transaction });
+
+
+    // const updatedCustomerNumber = customer.CustomerNumber.replace(/^IS/, "IM");
     let newOrder, operationMessage, emailTemplate, emalilTemplateForUser;
     const updatedStatusDeliveryDate = new Date();
     updatedStatusDeliveryDate.setDate(updatedStatusDeliveryDate.getDate() + 3);

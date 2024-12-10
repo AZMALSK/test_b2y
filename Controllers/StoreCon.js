@@ -36,7 +36,7 @@ exports.getAllStores = async (req, res) => {
       ],
       attributes: [
         'StoreID', 'StoreName', 'Email', 'Phone', 'AddressLine1',
-        'AddressLine2', 'CityID', 'StoreCode', 'StateID', 'CountryID', 'ZipCode'
+        'AddressLine2', 'CityID', 'StoreCode',  'CustomerStoreCode', 'StateID', 'CountryID', 'ZipCode'
       ],
       order: [
         [Sequelize.literal('GREATEST("Store"."CreatedAt", "Store"."UpdatedAt")'), 'DESC'],
@@ -84,6 +84,7 @@ exports.getAllStores = async (req, res) => {
       StateName: store.State?.StateName || null,
       CountryName: store.Country?.CountryName || null,
       StoreCode: store.StoreCode,
+      CustomerStoreCode:store.CustomerStoreCode,
       ZipCode: store.ZipCode
     }));
 
@@ -143,7 +144,7 @@ exports.getStoreById = async (req, res) => {
           attributes: ['CountryName']
         }
       ],
-      attributes:['StoreID', 'StoreName', 'Email', 'Phone','AddressLine1','AddressLine2','StoreCode','ZipCode'],
+      attributes:['StoreID', 'StoreName', 'Email', 'Phone','AddressLine1','AddressLine2','StoreCode','CustomerStoreCode','ZipCode'],
     });
 
     
@@ -161,6 +162,7 @@ exports.getStoreById = async (req, res) => {
       StateName: store.State?.StateName || null, 
       CountryName: store.Country?.CountryName || null,
       StoreCode: store.StoreCode,
+      CustomerStoreCode:store.CustomerStoreCode,
       StateID: store.StateID,
       CountryID: store.CountryID,
       ZipCode: store.ZipCode,
@@ -242,6 +244,7 @@ exports.getStoreById = async (req, res) => {
 // };
 
 // Controller function to create or update store
+
 exports.createOrUpdateStore = async (req, res) => {
   try {
     const data = req.body.data ? JSON.parse(req.body.data) : req.body;
@@ -260,6 +263,7 @@ exports.createOrUpdateStore = async (req, res) => {
       CountryID,
       ZipCode,
       StoreCode,
+      CustomerStoreCode,
       CreatedBy,
       UpdatedBy
     } = data;
@@ -312,6 +316,7 @@ exports.createOrUpdateStore = async (req, res) => {
         CountryID,
         ZipCode,
         StoreCode,
+        CustomerStoreCode,
         UpdatedAt: new Date(),
         UpdatedBy
       });
@@ -346,6 +351,7 @@ exports.createOrUpdateStore = async (req, res) => {
         CountryID,
         ZipCode,
         StoreCode,
+        CustomerStoreCode,
         CreatedBy,
         CreatedAt: new Date(),
         UpdatedBy,
