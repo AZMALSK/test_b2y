@@ -4,6 +4,10 @@ const { v4: uuidv4 } = require('uuid');
 const { Op } = require('sequelize'); 
 const multer = require('multer');
 const { storage_uploads } = require('../middleware/Cloundinary');
+const crypto = require('crypto');
+const otpStorage = new Map(); // Temporary in-memory storage. Replace with Redis for production.
+const { sendTemplateEmailForUser } = require('../middleware/SendEmail'); // Your existing email service
+
 
 const upload = multer({ storage: storage_uploads }).fields([
   { name: 'ProfileImage', maxCount: 1 }, 
@@ -513,5 +517,88 @@ exports.deleteUser = async (req, res) => {
   } catch (error) {
     console.error('Error deleting user:', error);
     res.status(500).json({ error: 'Internal Server Error' });
+  }
+};
+
+exports.updatePassword = async (req, res) => {
+  const { UserID, OldPassword, NewPassword, ConfirmPassword } = req.body;
+
+  // Check if new and confirm passwords match
+  if (NewPassword !== ConfirmPassword) {
+      return res.status(400).json({ message: "New Password and Confirm Password do not match." });
+  }
+
+  try {
+      // Find the user by ID
+      const user = await UserManagementModel.findByPk(UserID);
+      if (!user) {
+          return res.status(404).json({ message: "User not found." });
+      }
+
+      // Compare old password
+      if (OldPassword !== user.Password) {
+          return res.status(400).json({ message: "Old Password is incorrect." });
+      }
+
+      // Update the password
+      user.Password = NewPassword;
+      await user.save();
+
+      res.status(200).json({ message: "Password updated successfully." });
+  } catch (error) {
+      console.error("Error updating password:", error);
+      res.status(500).json({ message: "Internal server error." });
+  }
+};
+
+exports.forgotPassword = async (req, res) => {
+    const { Email } = req.body;
+
+    try {
+        const user = await UserManagementModel.findOne({ where: { Email } });
+        if (!user) {
+            return res.status(404).json({ message: "Email not registered." });
+        }
+
+        const otp = crypto.randomInt(100000, 999999).toString(); // Generate 6-digit OTP
+        otpStorage.set(Email, { otp, expiresAt: Date.now() + 5 * 60 * 1000 }); // Valid for 5 minutes
+
+        await sendTemplateEmailForUser('ForgotPassword', {
+          assignedUserEmail: Email,
+            otp
+        });
+
+        res.status(200).json({ message: "OTP sent to your email." });
+    } catch (error) {
+        console.error("Error during forgot password:", error);
+        res.status(500).json({ message: "Internal server error." });
+    }
+};
+
+
+exports.validateOtpAndUpdatePassword = async (req, res) => {
+  const { Email, OTP, NewPassword } = req.body;
+
+  const otpData = otpStorage.get(Email);
+  if (!otpData || otpData.otp !== OTP || otpData.expiresAt < Date.now()) {
+      return res.status(400).json({ message: "Invalid or expired OTP." });
+  }
+
+  try {
+      // const hashedPassword = await (NewPassword, 10);
+      const user = await UserManagementModel.findOne({ where: { Email } });
+      if (!user) {
+          return res.status(404).json({ message: "User not found." });
+      }
+
+      user.Password = NewPassword;
+      await user.save();
+
+      otpStorage.delete(Email); // Remove OTP after successful update
+
+      res.status(200).json({ message: "Password updated successfully." });
+  } catch (error) {
+      console.error("Error validating OTP and updating password:", error);
+      res.status(500).json({ message: "Internal server error." });
   }
 };
