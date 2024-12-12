@@ -575,14 +575,35 @@ exports.forgotPassword = async (req, res) => {
     }
 };
 
+exports.validateOtp = async (req, res) => {
+  const { Email, OTP } = req.body;
+
+  try {
+      // Check if the OTP exists and is valid
+      const otpData = otpStorage.get(Email);
+      if (!otpData || otpData.otp !== OTP || otpData.expiresAt < Date.now()) {
+          return res.status(400).json({ message: "Invalid or expired OTP." });
+      }
+
+      res.status(200).json({ message: "OTP is valid." });
+  } catch (error) {
+      console.error("Error validating OTP:", error);
+      res.status(500).json({ message: "Internal server error." });
+  }
+};
+
 
 exports.validateOtpAndUpdatePassword = async (req, res) => {
-  const { Email, OTP, NewPassword } = req.body;
+  const { Email, NewPassword, ConfirmPassword} = req.body;
 
-  const otpData = otpStorage.get(Email);
-  if (!otpData || otpData.otp !== OTP || otpData.expiresAt < Date.now()) {
-      return res.status(400).json({ message: "Invalid or expired OTP." });
-  }
+  // const otpData = otpStorage.get(Email);
+  // if (!otpData || otpData.otp !== OTP || otpData.expiresAt < Date.now()) {
+  //     return res.status(400).json({ message: "Invalid or expired OTP." });
+  // }
+
+  if (NewPassword !== ConfirmPassword) {
+    return res.status(400).json({ message: "New Password and Confirm Password do not match." });
+ }
 
   try {
       // const hashedPassword = await (NewPassword, 10);
@@ -602,3 +623,5 @@ exports.validateOtpAndUpdatePassword = async (req, res) => {
       res.status(500).json({ message: "Internal server error." });
   }
 };
+
+

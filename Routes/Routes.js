@@ -55,7 +55,9 @@ router.put('/updateUser/:id', verifyToken, isUser, userController.updateUser);
 router.delete('/deleteUser/:id', verifyToken, isAdmin, userController.deleteUser);
 router.post('/UpdatePassword',userController.updatePassword);
 router.post('/ForgotPassword',userController.forgotPassword);
+router.post('/validateOtp',userController.validateOtp);
 router.post('/validateOtpAndUpdatePassword',userController.validateOtpAndUpdatePassword);
+
 //Routes for Stores
 router.post('/createOrUpdateStore', storeController.createOrUpdateStore);
 router.get('/getAllStores', storeController.getAllStores);
