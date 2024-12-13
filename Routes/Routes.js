@@ -175,7 +175,7 @@ router.post('/chat', handleChatQuery);
 
 
 router.post('/createTenantSettings',TenantSettingsController.createTenantSettings);
-router.post('/updateTenantSettings',TenantSettingsController.updateTenantSettings);
+router.put('/updateTenantSettings/:TenantID',TenantSettingsController.updateTenantSettings);
 router.get('/getTenantSettings',TenantSettingsController.getTenantSettings);
 
 module.exports = router;
