@@ -16,6 +16,7 @@ const DashboardController=require('../Controllers/DashboardController');
 const ProjectTypeController=require('../Controllers/ProjectTypeController');
 const referenceController = require('../Controllers/referenceController');
 const HolidayCalendarController = require('../Controllers/HolidayCalendarController');
+const TenantSettingsController = require('../Controllers/TenantSettingsController');
 const { handleChatQuery } = require('../Controllers/ChatbotController');
 const { createOrderOrUpdate,updateOrder,getOrderById,deleteOrderById,getAllOrders,GetSaleOrderReport,updateSubOrderStatus,triggerAdvanceMeasurementPaymentEmail} = require('../Controllers/ordercontroller');
 const { getAllPayments, getPaymentById,getPaymentByPaymentId,createOrUpdatePayment } = require('../Controllers/PaymentController'); 
@@ -173,6 +174,9 @@ router.get('/listHolidays',HolidayCalendarController.listHolidays);
 router.post('/chat', handleChatQuery);
 
 
+router.post('/createTenantSettings',TenantSettingsController.createTenantSettings);
+router.post('/updateTenantSettings',TenantSettingsController.updateTenantSettings);
+router.get('/getTenantSettings',TenantSettingsController.getTenantSettings);
 
 module.exports = router;
 

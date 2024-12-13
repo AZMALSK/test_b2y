@@ -51,6 +51,8 @@ const FeedbackModel= require('../Models/FeedBack')(sequelize);
 const ProjectTypeModel = require('../Models/ProjectType')(sequelize);
 const ReferenceModel = require('../Models/Reference')(sequelize);
 const HolidayCalendarModel = require('../Models/holidayCalender')(sequelize);
+const TenantModel = require('../Models/Tenant')(sequelize);
+const TenantSettingsModel = require('../Models/TenantSettings')(sequelize);
 // const NewCityModel= require('../Models/NewCity')(sequelize);
 // const NewStateModel=require('../Models/NewState')(sequelize);
 
@@ -122,7 +124,6 @@ OrderTabelModel.hasMany(Payment, {foreignKey: 'OrderID',});
 
 //Address to OrdersTabel Association
 OrderTabelModel.belongsTo(AddressModel, { foreignKey: 'AddressID',  as: 'Address', allowNull: true });
-
 OrderHistory.belongsTo(OrderTabelModel, { foreignKey: 'OrderID', onDelete: 'CASCADE' ,as:'OrdersTable'});
 
 // UserAddress belongs to City
@@ -233,7 +234,7 @@ sequelize.sync({ alter: false }).then(() => {
     console.log('Database & tables created!');
 });
 
-module.exports = { sequelize, CustomerModel,AddressModel,UserManagementModel,StoreModel,RoleModel,OrderTabelModel,ProjectTypeModel,ReferenceModel,HolidayCalendarModel,
+module.exports = { sequelize, CustomerModel,AddressModel,UserManagementModel,StoreModel,RoleModel,OrderTabelModel,ProjectTypeModel,ReferenceModel,HolidayCalendarModel,TenantModel,TenantSettingsModel,
   OrderHistory,Payment,UserAddressModel,MapStoreUser,CityModel,StateModel,CountryModel,EmailTemplate,PermissionsModel,MapRolePermissionsModel,OrderStatusModel,InventoryModel,FeedbackModel};
 
   

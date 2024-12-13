@@ -18,6 +18,7 @@ const DashboardRoutes = require('./Routes/Routes');
 const ProjectTypeRoutes = require('./Routes/Routes');
 const referenceRoutes = require('./Routes/Routes');
 const holidayCalenderRoutes = require('./Routes/Routes');
+const TenantRoutes = require('./Routes/Routes');
 const {initializeCronJobs} = require('./middleware/cronJobs');
 const chatbotRoutes = require('./Routes/Routes');
 
@@ -66,6 +67,7 @@ app.use('/api/Dashboard', DashboardRoutes);
 app.use('/api/ProjectTypeRoutes',ProjectTypeRoutes);
 app.use('/api/referenceRoutes',referenceRoutes);
 app.use('/api/holidayCalender',holidayCalenderRoutes);
+app.use('/api/Tenant',TenantRoutes);
 app.use('/api/auth', chatbotRoutes);
   
 
