@@ -119,6 +119,7 @@ exports.loginUser = async (req, res) => {
             { 
                 UserID: user.UserID, 
                 RoleID: user.RoleID, 
+                TenantID: user.TenantID,
                 StoreIDs: storeIDs,
                 PermissionID:permissionIDs,
                 Permissions: permissionNames  // Add permission names to the token
@@ -126,7 +127,7 @@ exports.loginUser = async (req, res) => {
             process.env.JWT_SECRET, 
             { expiresIn: '1h' }
         );
-       
+        console.log('User Tenant', user.TenantID);
         console.log('Token generated', token);
 
         res.status(200).json({ message: 'Login successful', token });
