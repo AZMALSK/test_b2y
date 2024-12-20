@@ -174,7 +174,7 @@ const uploadFileToSupabase = async (file) => {
     }
 
     // Construct the public URL manually with download and file name headers
-    const supabaseUrl = 'https://qnklgihlazkpiwsfdlpu.supabase.co';
+    const supabaseUrl = 'https://wumwtcghvhxdpgctsoyy.supabase.co';
     const publicUrl = `${supabaseUrl}/storage/v1/object/public/uploaddocument/documents/${fileNameWithTimestamp}`;
     const downloadUrl = `${publicUrl}?download=&fileName=${encodeURIComponent(file.originalname)}`;
 
@@ -983,7 +983,7 @@ exports.checkStatusAndSendEmail = async (req, res) => {
         });
 
         if (!orderHistory) {
-            return res.status(400).json({ message: 'No matching order with StatusID 5 found.' });
+            return res.status(400).json({ message: 'No matching order with StatusID 6 found.' });
         }
 
         // Fetch related order and customer details
