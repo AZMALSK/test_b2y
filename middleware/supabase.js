@@ -12,7 +12,7 @@ const supabaseTenantKey = process.env.SUPABASE_KEY;
 const supabaseTenant = createClient(supabaseTenantUrl, supabaseTenantKey);
 
 
-module.exports = {supabase ,supabaseTenant};
+module.exports = { supabase ,supabaseTenant };
 
 
 

@@ -5,7 +5,7 @@ const { ProjectTypeModel,OrderTabelModel , CustomerModel} = require('../Connecti
 // const upload = multer({ storage: inventorystorage }).single('inventoryFile');
 const path = require('path');
 const moment = require('moment');
-const supabase = require('../middleware/supabase');
+const { supabase }= require('../middleware/supabase');
 const { Op } = require('sequelize'); // Import Op for Sequelize operators
  
 const upload = multer({ storage: multer.memoryStorage() }).fields([
@@ -35,7 +35,7 @@ const uploadFileToSupabase = async (file) => {
     }
  
     // Construct the public URL manually with download and file name headers
-    const supabaseUrl = 'https://qnklgihlazkpiwsfdlpu.supabase.co';
+    const supabaseUrl = 'https://wumwtcghvhxdpgctsoyy.supabase.co';
     const publicUrl = `${supabaseUrl}/storage/v1/object/public/uploaddocument/documents/${fileNameWithTimestamp}`;
     const downloadUrl = `${publicUrl}?download=&fileName=${encodeURIComponent(file.originalname)}`;
  

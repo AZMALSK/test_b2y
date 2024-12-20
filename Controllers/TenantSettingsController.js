@@ -33,7 +33,7 @@ const uploadFileToSupabase = async (file, folder) => {
     }
 
     // Construct the public URL
-    const supabaseUrl = 'https://qnklgihlazkpiwsfdlpu.supabase.co';
+    const supabaseUrl = 'https://wumwtcghvhxdpgctsoyy.supabase.co';
     const publicUrl = `${supabaseUrl}/storage/v1/object/public/uploaddocument/documents/${folder}/${fileNameWithTimestamp}`;
     
     return { publicUrl, originalFileName: file.originalname };
