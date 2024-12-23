@@ -323,6 +323,15 @@ exports.createOrUpdateCustomer = async (req, res) => {
                 // const customerNumber = `${storeCode}/${newCustomer.CustomerID}`;
                 // await newCustomer.update({ CustomerNumber: customerNumber }, { transaction });
 
+                // Prepare customer details for the email
+                const customerDetails = {
+                    customerFirstName: FirstName,
+                    customerLastName: LastName,
+                    customerEmail: Email
+                };
+
+                await sendTemplateEmail('CustomerCreated', customerDetails);
+
                 await transaction.commit();
 
                 return res.status(201).json({

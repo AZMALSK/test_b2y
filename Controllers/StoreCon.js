@@ -178,73 +178,7 @@ exports.getStoreById = async (req, res) => {
   }
 };
 
-//Create or update store 
-// exports.createOrUpdateStore = async (req, res) => {
-//   const { StoreId, TenantID, StoreName, Email, Phone, Address,AddressLine1, AddressLine2, StoreCode,CityID, CreatedBy, StateID, CountryID, ZipCode, UpdatedBy } = req.body;
-
-//   try {
-//     if (StoreId && StoreId !== 0) {
-//       // Update existing store
-//       const store = await StoreModel.findByPk(StoreId);
-
-//       if (!store) {
-//         return res.status(404).json({
-//           StatusCode: 'ERROR',
-//           message: 'Store not found'
-//         });
-//       }
-
-//       // Check if email is unique
-//       const existingStore = await StoreModel.findOne({ where: { Email } });
-//       if (existingStore && existingStore.StoreID !== StoreId) {
-//         return res.status(200).json({
-//           StatusCode: 'ERROR',
-//           message: 'A store with this email already exists'
-//         });
-//       }
-
-//       await store.update({ TenantID,
-//         StoreName,
-//         StoreCode, 
-//         Email,
-//         Phone,
-//         Address,
-//         AddressLine1, 
-//         AddressLine2, 
-//         CityID,
-//         StateID,
-//         CountryID, 
-//         ZipCode,
-//         UpdatedAt: new Date(),
-//         CreatedBy,
-//         UpdatedBy });
-
-//       return res.status(200).json({
-//         StatusCode: 'SUCCESS',
-//         message: 'Store updated successfully',
-//         StoreID: store.StoreID
-//       });
-//     } else {
-//       // Create a new store
-//       const newStore = await StoreModel.create({ TenantID, StoreName,StoreCode, Email, Phone, Address, AddressLine2, CityID,StateID, CountryID, ZipCode,CreatedAt: new Date(),UpdatedAt: new Date(),CreatedBy, UpdatedBy });
-
-//       return res.status(201).json({
-//         StatusCode: 'SUCCESS',
-//         message: 'Store created successfully',
-//         StoreID: newStore.StoreID
-//       });
-//     }
-//   } catch (error) {
-//     console.error('Error creating or updating store:', error);
-//     return res.status(500).json({
-//       StatusCode: 'ERROR',
-//       message: 'Internal Server Error'
-//     });
-//   }
-// };
-
 // Controller function to create or update store
-
 exports.createOrUpdateStore = async (req, res) => {
   try {
     const data = req.body.data ? JSON.parse(req.body.data) : req.body;
