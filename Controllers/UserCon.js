@@ -3,215 +3,470 @@ const { Sequelize, DataTypes } = require('sequelize');
 const { v4: uuidv4 } = require('uuid');
 const { Op } = require('sequelize'); 
 const multer = require('multer');
+const moment = require('moment');
 const { storage_uploads } = require('../middleware/Cloundinary');
 const crypto = require('crypto');
+const path = require('path');
+const fs = require('fs').promises;
 const otpStorage = new Map(); // Temporary in-memory storage. Replace with Redis for production.
 const { sendTemplateEmailForUser } = require('../middleware/SendEmail'); // Your existing email service
 
 
-const upload = multer({ storage: storage_uploads }).fields([
-  { name: 'ProfileImage', maxCount: 1 }, 
+// const upload = multer({ storage: storage_uploads }).fields([
+//   { name: 'ProfileImage', maxCount: 1 }, 
+// ]);
+
+// // Controller function to create or update user with profile image upload
+// exports.createOrUpdateUser = async (req, res) => {
+//   upload(req, res, async function (err) {
+//     if (err instanceof multer.MulterError || err) {
+//       return res.status(500).json({ StatusCode: 'ERROR', err, message: 'Failed to upload profile image.' });
+//     }
+
+//     try {
+//       const data = req.body.data ? JSON.parse(req.body.data) : req.body;
+
+//       const {
+//         UserID,
+//         TenantID,
+//         FirstName,
+//         LastName,
+//         Email,
+//         Password,
+//         PhoneNumber,
+//         Gender,
+//         RoleID,
+//         Comments,
+//         AddressLine1,
+//         AddressLine2,
+//         CityID,
+//         StateID,
+//         CountryID,
+//         ZipCode,
+//         StoreID,
+//         CreatedBy,
+//         UpdatedBy
+//       } = data;
+
+//       // Validate required fields
+//       if (!Email) {
+//         return res.status(404).json({
+//           StatusCode: 'ERROR',
+//           message: 'Email is required'
+//         });
+//       }
+
+//       // Handle profile image upload
+//       let profileImagePath = req.files['ProfileImage'] ? req.files['ProfileImage'][0].path : null;
+
+//       if (UserID && UserID !== 0) {
+//         // Update User
+//         const user = await UserManagementModel.findByPk(UserID);
+
+//         if (!user) {
+//           return res.status(404).json({
+//             StatusCode: 'ERROR',
+//             message: 'User not found'
+//           });
+//         }
+
+//         // Check for duplicate email
+//         const existingUser = await UserManagementModel.findOne({
+//           where: {
+//             Email,
+//             UserID: { [Op.ne]: UserID } // Ensure it's not the current user
+//           }
+//         });
+
+//         if (existingUser) {
+//           return res.status(200).json({
+//             StatusCode: 'ERROR',
+//             message: 'A user with this email already exists'
+//           });
+//         }
+
+//         let addressId = user.AddressID;
+//         if (AddressLine1 || AddressLine2 || CityID || StateID || CountryID || ZipCode) {
+//           if (addressId) {
+//             await UserAddressModel.update({
+//               AddressLine1,
+//               AddressLine2,
+//               CityID,
+//               StateID,
+//               CountryID,
+//               ZipCode,
+//               UpdatedAt: new Date(),
+//               UpdatedBy
+//             }, {
+//               where: { AddressID: addressId }
+//             });
+//           } else {
+//             const address = await UserAddressModel.create({
+//               TenantID,
+//               AddressLine1,
+//               AddressLine2,
+//               CityID,
+//               StateID,
+//               CountryID,
+//               ZipCode,
+//               StoreID,
+//               CreatedAt: new Date(),
+//               UpdatedAt: new Date(),
+//               CreatedBy: user.CreatedBy,
+//               UpdatedBy
+//             });
+//             addressId = address.AddressID;
+//             await user.update({ AddressID: addressId });
+//           }
+//         }
+
+//         // Update user details, including profile image if it exists
+//         await user.update({
+//           TenantID,
+//           FirstName,
+//           LastName,
+//           Email,
+//           Password,
+//           PhoneNumber,
+//           Gender,
+//           RoleID,
+//           Comments,
+//           StoreID,
+//           UpdatedAt: new Date(),
+//           ProfileImage: profileImagePath || user.ProfileImage, // If new image uploaded, update path
+//           UpdatedBy
+//         });
+
+//         return res.status(200).json({
+//           StatusCode: 'SUCCESS',
+//           message: 'User updated successfully',
+//           UserID: user.UserID
+//         });
+
+//       } else {
+//         // Create User
+//         // Check for duplicate email before creation
+//         const existingUser = await UserManagementModel.findOne({
+//           where: { Email }
+//         });
+
+//         if (existingUser) {
+//           return res.status(200).json({
+//             StatusCode: 'ERROR',
+//             message: 'A user with this email already exists'
+//           });
+//         }
+
+//         // Generate EmployeeID
+//         const EmployeeID = `EMP-${Date.now()}`;
+
+//         let addressId = null;
+//         if (AddressLine1 || AddressLine2 || CityID || StateID || CountryID || ZipCode) {
+//           const address = await UserAddressModel.create({
+//             TenantID,
+//             AddressLine1,
+//             AddressLine2,
+//             CityID,
+//             StateID,
+//             CountryID,
+//             ZipCode,
+//             CreatedBy,
+//             CreatedAt: new Date(),
+//             UpdatedAt: new Date(),
+//             UpdatedBy
+//           });
+
+//           addressId = address.AddressID;
+//         }
+
+//         const user = await UserManagementModel.create({
+//           TenantID,
+//           EmployeeID,
+//           FirstName,
+//           LastName,
+//           Email,
+//           Password,
+//           PhoneNumber,
+//           Gender,
+//           RoleID,
+//           StoreID,
+//           AddressID: addressId,
+//           ProfileImage: profileImagePath, // Set uploaded profile image path
+//           Comments,
+//           CreatedBy,
+//           CreatedAt: new Date(),
+//           UpdatedAt: new Date(),
+//           UpdatedBy
+//         });
+
+//         return res.status(201).json({
+//           StatusCode: 'SUCCESS',
+//           message: 'User created successfully',
+//           UserID: user.UserID
+//         });
+//       }
+//     } catch (error) {
+//       console.error('Error creating or updating user:', error);
+//       return res.status(500).json({
+//         StatusCode: 'ERROR',
+//         message: 'Internal Server Error'
+//       });
+//     }
+//   });
+// };
+
+const UPLOAD_BASE_DIR = '/imlystudios/uploads';
+const PUBLIC_URL_BASE = 'http://156.67.111.32:3000/uploads';
+
+// Configure storage for profile images
+const storage = multer.diskStorage({
+    destination: async function (req, file, cb) {
+        const fullPath = path.join(UPLOAD_BASE_DIR, 'documents/profiles');
+        console.log('Saving profile image to directory:', fullPath);
+        await fs.mkdir(fullPath, { recursive: true });
+        cb(null, fullPath);
+    },
+    filename: function (req, file, cb) {
+        const sanitizedFileName = file.originalname.replace(/[^\w\.-]/g, '_');
+        const timestamp = moment().format('DDMMYYYY_HHmmss');
+        const finalFileName = `${sanitizedFileName}_${timestamp}${path.extname(file.originalname)}`;
+        console.log('Generated filename:', finalFileName);
+        cb(null, finalFileName);
+    }
+});
+
+const profileUpload = multer({
+    storage: storage,
+    limits: {
+        fileSize: 5 * 1024 * 1024 // 5MB limit
+    },
+    fileFilter: (req, file, cb) => {
+        const allowedTypes = ['image/jpeg', 'image/png', 'image/gif'];
+        if (!allowedTypes.includes(file.mimetype)) {
+            cb(new Error('Invalid file type. Only JPEG, PNG and GIF are allowed.'));
+            return;
+        }
+        cb(null, true);
+    }
+}).fields([
+    { name: 'ProfileImage', maxCount: 1 }
 ]);
 
-// Controller function to create or update user with profile image upload
-exports.createOrUpdateUser = async (req, res) => {
-  upload(req, res, async function (err) {
-    if (err instanceof multer.MulterError || err) {
-      return res.status(500).json({ StatusCode: 'ERROR', err, message: 'Failed to upload profile image.' });
-    }
-
-    try {
-      const data = req.body.data ? JSON.parse(req.body.data) : req.body;
-
-      const {
-        UserID,
-        TenantID,
-        FirstName,
-        LastName,
-        Email,
-        Password,
-        PhoneNumber,
-        Gender,
-        RoleID,
-        Comments,
-        AddressLine1,
-        AddressLine2,
-        CityID,
-        StateID,
-        CountryID,
-        ZipCode,
-        StoreID,
-        CreatedBy,
-        UpdatedBy
-      } = data;
-
-      // Validate required fields
-      if (!Email) {
-        return res.status(404).json({
-          StatusCode: 'ERROR',
-          message: 'Email is required'
-        });
-      }
-
-      // Handle profile image upload
-      let profileImagePath = req.files['ProfileImage'] ? req.files['ProfileImage'][0].path : null;
-
-      if (UserID && UserID !== 0) {
-        // Update User
-        const user = await UserManagementModel.findByPk(UserID);
-
-        if (!user) {
-          return res.status(404).json({
-            StatusCode: 'ERROR',
-            message: 'User not found'
-          });
-        }
-
-        // Check for duplicate email
-        const existingUser = await UserManagementModel.findOne({
-          where: {
-            Email,
-            UserID: { [Op.ne]: UserID } // Ensure it's not the current user
-          }
-        });
-
-        if (existingUser) {
-          return res.status(200).json({
-            StatusCode: 'ERROR',
-            message: 'A user with this email already exists'
-          });
-        }
-
-        let addressId = user.AddressID;
-        if (AddressLine1 || AddressLine2 || CityID || StateID || CountryID || ZipCode) {
-          if (addressId) {
-            await UserAddressModel.update({
-              AddressLine1,
-              AddressLine2,
-              CityID,
-              StateID,
-              CountryID,
-              ZipCode,
-              UpdatedAt: new Date(),
-              UpdatedBy
-            }, {
-              where: { AddressID: addressId }
-            });
-          } else {
-            const address = await UserAddressModel.create({
-              TenantID,
-              AddressLine1,
-              AddressLine2,
-              CityID,
-              StateID,
-              CountryID,
-              ZipCode,
-              StoreID,
-              CreatedAt: new Date(),
-              UpdatedAt: new Date(),
-              CreatedBy: user.CreatedBy,
-              UpdatedBy
-            });
-            addressId = address.AddressID;
-            await user.update({ AddressID: addressId });
-          }
-        }
-
-        // Update user details, including profile image if it exists
-        await user.update({
-          TenantID,
-          FirstName,
-          LastName,
-          Email,
-          Password,
-          PhoneNumber,
-          Gender,
-          RoleID,
-          Comments,
-          StoreID,
-          UpdatedAt: new Date(),
-          ProfileImage: profileImagePath || user.ProfileImage, // If new image uploaded, update path
-          UpdatedBy
-        });
-
-        return res.status(200).json({
-          StatusCode: 'SUCCESS',
-          message: 'User updated successfully',
-          UserID: user.UserID
-        });
-
-      } else {
-        // Create User
-        // Check for duplicate email before creation
-        const existingUser = await UserManagementModel.findOne({
-          where: { Email }
-        });
-
-        if (existingUser) {
-          return res.status(200).json({
-            StatusCode: 'ERROR',
-            message: 'A user with this email already exists'
-          });
-        }
-
-        // Generate EmployeeID
-        const EmployeeID = `EMP-${Date.now()}`;
-
-        let addressId = null;
-        if (AddressLine1 || AddressLine2 || CityID || StateID || CountryID || ZipCode) {
-          const address = await UserAddressModel.create({
-            TenantID,
-            AddressLine1,
-            AddressLine2,
-            CityID,
-            StateID,
-            CountryID,
-            ZipCode,
-            CreatedBy,
-            CreatedAt: new Date(),
-            UpdatedAt: new Date(),
-            UpdatedBy
-          });
-
-          addressId = address.AddressID;
-        }
-
-        const user = await UserManagementModel.create({
-          TenantID,
-          EmployeeID,
-          FirstName,
-          LastName,
-          Email,
-          Password,
-          PhoneNumber,
-          Gender,
-          RoleID,
-          StoreID,
-          AddressID: addressId,
-          ProfileImage: profileImagePath, // Set uploaded profile image path
-          Comments,
-          CreatedBy,
-          CreatedAt: new Date(),
-          UpdatedAt: new Date(),
-          UpdatedBy
-        });
-
-        return res.status(201).json({
-          StatusCode: 'SUCCESS',
-          message: 'User created successfully',
-          UserID: user.UserID
-        });
-      }
-    } catch (error) {
-      console.error('Error creating or updating user:', error);
-      return res.status(500).json({
-        StatusCode: 'ERROR',
-        message: 'Internal Server Error'
-      });
-    }
-  });
+// Function to get public URL for profile image
+const getProfileImageUrl = (filename) => {
+    return `${PUBLIC_URL_BASE}/documents/profiles/${filename}`;
 };
 
+exports.createOrUpdateUser = async (req, res) => {
+    profileUpload(req, res, async function (err) {
+        if (err instanceof multer.MulterError) {
+            return res.status(400).json({
+                StatusCode: 'ERROR',
+                message: 'File upload error',
+                details: err.message
+            });
+        } else if (err) {
+            return res.status(500).json({
+                StatusCode: 'ERROR',
+                message: 'Server error during file upload',
+                details: err.message
+            });
+        }
+
+        try {
+            const data = req.body.data ? JSON.parse(req.body.data) : req.body;
+
+            const {
+                UserID,
+                TenantID,
+                FirstName,
+                LastName,
+                Email,
+                Password,
+                PhoneNumber,
+                Gender,
+                RoleID,
+                Comments,
+                AddressLine1,
+                AddressLine2,
+                CityID,
+                StateID,
+                CountryID,
+                ZipCode,
+                StoreID,
+                CreatedBy,
+                UpdatedBy
+            } = data;
+
+            // Validate required fields
+            if (!Email) {
+                return res.status(404).json({
+                    StatusCode: 'ERROR',
+                    message: 'Email is required'
+                });
+            }
+
+            // Handle profile image upload
+            let profileImageUrl = null;
+            if (req.files && req.files['ProfileImage']) {
+                const profileImage = req.files['ProfileImage'][0];
+                profileImageUrl = getProfileImageUrl(profileImage.filename);
+            }
+
+            if (UserID && UserID !== 0) {
+                // Update User
+                const user = await UserManagementModel.findByPk(UserID);
+
+                if (!user) {
+                    return res.status(404).json({
+                        StatusCode: 'ERROR',
+                        message: 'User not found'
+                    });
+                }
+
+                // Check for duplicate email
+                const existingUser = await UserManagementModel.findOne({
+                    where: {
+                        Email,
+                        UserID: { [Op.ne]: UserID }
+                    }
+                });
+
+                if (existingUser) {
+                    return res.status(200).json({
+                        StatusCode: 'ERROR',
+                        message: 'A user with this email already exists'
+                    });
+                }
+
+                let addressId = user.AddressID;
+                if (AddressLine1 || AddressLine2 || CityID || StateID || CountryID || ZipCode) {
+                    if (addressId) {
+                        await UserAddressModel.update({
+                            AddressLine1,
+                            AddressLine2,
+                            CityID,
+                            StateID,
+                            CountryID,
+                            ZipCode,
+                            UpdatedAt: new Date(),
+                            UpdatedBy
+                        }, {
+                            where: { AddressID: addressId }
+                        });
+                    } else {
+                        const address = await UserAddressModel.create({
+                            TenantID,
+                            AddressLine1,
+                            AddressLine2,
+                            CityID,
+                            StateID,
+                            CountryID,
+                            ZipCode,
+                            StoreID,
+                            CreatedAt: new Date(),
+                            UpdatedAt: new Date(),
+                            CreatedBy: user.CreatedBy,
+                            UpdatedBy
+                        });
+                        addressId = address.AddressID;
+                        await user.update({ AddressID: addressId });
+                    }
+                }
+
+                // Update user details with new profile image URL if uploaded
+                await user.update({
+                    TenantID,
+                    FirstName,
+                    LastName,
+                    Email,
+                    Password,
+                    PhoneNumber,
+                    Gender,
+                    RoleID,
+                    Comments,
+                    StoreID,
+                    UpdatedAt: new Date(),
+                    ProfileImage: profileImageUrl || user.ProfileImage,
+                    UpdatedBy
+                });
+
+                return res.status(200).json({
+                    StatusCode: 'SUCCESS',
+                    message: 'User updated successfully',
+                    UserID: user.UserID
+                });
+
+            } else {
+                // Create User
+                const existingUser = await UserManagementModel.findOne({
+                    where: { Email }
+                });
+
+                if (existingUser) {
+                    return res.status(200).json({
+                        StatusCode: 'ERROR',
+                        message: 'A user with this email already exists'
+                    });
+                }
+
+                const EmployeeID = `EMP-${Date.now()}`;
+
+                let addressId = null;
+                if (AddressLine1 || AddressLine2 || CityID || StateID || CountryID || ZipCode) {
+                    const address = await UserAddressModel.create({
+                        TenantID,
+                        AddressLine1,
+                        AddressLine2,
+                        CityID,
+                        StateID,
+                        CountryID,
+                        ZipCode,
+                        CreatedBy,
+                        CreatedAt: new Date(),
+                        UpdatedAt: new Date(),
+                        UpdatedBy
+                    });
+
+                    addressId = address.AddressID;
+                }
+
+                const user = await UserManagementModel.create({
+                    TenantID,
+                    EmployeeID,
+                    FirstName,
+                    LastName,
+                    Email,
+                    Password,
+                    PhoneNumber,
+                    Gender,
+                    RoleID,
+                    StoreID,
+                    AddressID: addressId,
+                    ProfileImage: profileImageUrl,
+                    Comments,
+                    CreatedBy,
+                    CreatedAt: new Date(),
+                    UpdatedAt: new Date(),
+                    UpdatedBy
+                });
+
+                return res.status(201).json({
+                    StatusCode: 'SUCCESS',
+                    message: 'User created successfully',
+                    UserID: user.UserID
+                });
+            }
+        } catch (error) {
+            console.error('Error creating or updating user:', error);
+            return res.status(500).json({
+                StatusCode: 'ERROR',
+                message: 'Internal Server Error',
+                details: error.message
+            });
+        }
+    });
+};
 
 //Get AllUsers with pagination
 exports.getAllUsers = async (req, res) => {

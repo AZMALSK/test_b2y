@@ -3,12 +3,13 @@ const { Op } = require('sequelize');
 const { Sequelize, DataTypes } = require('sequelize');
 const { sequelize } = require('../Models/orderhistory');
 // const { upload } = require('../middleware/Cloundinary');
-const { storage } = require('../middleware/Cloundinary');
+// const { storage } = require('../middleware/Cloundinary');
 const { supabase } = require('../middleware/supabase');
 const { sendTemplateEmail,sendTemplateEmailForUser } = require('../middleware/SendEmail'); // Your existing email service
 const multer = require('multer');
 const moment = require('moment');
 const path = require('path');
+const fs = require('fs').promises;
 
 // const upload = multer({ storage: storage }).fields([
 //     { name: 'UploadDocument', maxCount: 10 }   
@@ -147,39 +148,73 @@ const path = require('path');
 
 
 
-const upload = multer({ storage: multer.memoryStorage() }).fields([
+// const upload = multer({ storage: multer.memoryStorage() }).fields([
+//     { name: 'UploadDocument', maxCount: 10 }
+// ]);
+
+// Function to upload a file to Supabase
+// const uploadFileToSupabase = async (file) => {
+//       // Sanitize the file name by removing special characters except allowed ones
+//       const sanitizedFileName = file.originalname.replace(/[^\w\.-]/g, '_');
+
+//       // Generate a unique file name with the current date and time
+//       const timestamp = moment().format('DDMMYYYY_HHmmss'); // Format as DDMMYYYY_HHmmss
+//       const fileNameWithTimestamp = `${sanitizedFileName}_${timestamp}${path.extname(file.originalname)}`; // Add the original file extension
+  
+//       // Upload the file to Supabase
+//       const { data, error } = await supabase
+//           .storage
+//           .from('uploaddocument')
+//           .upload(`documents/${fileNameWithTimestamp}`, file.buffer, {
+//               contentType: file.mimetype // Maintain the file type (e.g., PDF)
+//           });
+
+//     if (error) {
+//         console.error('Supabase Upload Error:', error);
+//         throw new Error('Error uploading file to Supabase: ' + error.message);
+//     }
+
+//     // Construct the public URL manually with download and file name headers
+//     const supabaseUrl = 'https://wumwtcghvhxdpgctsoyy.supabase.co';
+//     const publicUrl = `${supabaseUrl}/storage/v1/object/public/uploaddocument/documents/${fileNameWithTimestamp}`;
+//     const downloadUrl = `${publicUrl}?download=&fileName=${encodeURIComponent(file.originalname)}`;
+
+//     // Return the public URL, download URL, and the original file name
+//     return { publicUrl, downloadUrl, originalFileName: file.originalname };
+// };
+
+const UPLOAD_BASE_DIR = '/imlystudios/uploads';
+const PUBLIC_URL_BASE = 'http://156.67.111.32:3000/uploads';
+
+// Configure storage for order documents
+const storage = multer.diskStorage({
+    destination: async function (req, file, cb) {
+        const fullPath = path.join(UPLOAD_BASE_DIR, 'documents/historydocuments');
+        console.log('Saving order document to directory:', fullPath);
+        await fs.mkdir(fullPath, { recursive: true });
+        cb(null, fullPath);
+    },
+    filename: function (req, file, cb) {
+        const sanitizedFileName = file.originalname.replace(/[^\w\.-]/g, '_');
+        const timestamp = moment().format('DDMMYYYY_HHmmss');
+        const finalFileName = `${sanitizedFileName}_${timestamp}${path.extname(file.originalname)}`;
+        console.log('Generated filename:', finalFileName);
+        cb(null, finalFileName);
+    }
+});
+
+const upload = multer({
+    storage: storage,
+    limits: {
+        fileSize: 10 * 1024 * 1024 // 10MB limit
+    }
+}).fields([
     { name: 'UploadDocument', maxCount: 10 }
 ]);
 
-// Function to upload a file to Supabase
-const uploadFileToSupabase = async (file) => {
-      // Sanitize the file name by removing special characters except allowed ones
-      const sanitizedFileName = file.originalname.replace(/[^\w\.-]/g, '_');
-
-      // Generate a unique file name with the current date and time
-      const timestamp = moment().format('DDMMYYYY_HHmmss'); // Format as DDMMYYYY_HHmmss
-      const fileNameWithTimestamp = `${sanitizedFileName}_${timestamp}${path.extname(file.originalname)}`; // Add the original file extension
-  
-      // Upload the file to Supabase
-      const { data, error } = await supabase
-          .storage
-          .from('uploaddocument')
-          .upload(`documents/${fileNameWithTimestamp}`, file.buffer, {
-              contentType: file.mimetype // Maintain the file type (e.g., PDF)
-          });
-
-    if (error) {
-        console.error('Supabase Upload Error:', error);
-        throw new Error('Error uploading file to Supabase: ' + error.message);
-    }
-
-    // Construct the public URL manually with download and file name headers
-    const supabaseUrl = 'https://wumwtcghvhxdpgctsoyy.supabase.co';
-    const publicUrl = `${supabaseUrl}/storage/v1/object/public/uploaddocument/documents/${fileNameWithTimestamp}`;
-    const downloadUrl = `${publicUrl}?download=&fileName=${encodeURIComponent(file.originalname)}`;
-
-    // Return the public URL, download URL, and the original file name
-    return { publicUrl, downloadUrl, originalFileName: file.originalname };
+// Function to get public URL for order documents
+const getDocumentUrl = (filename) => {
+    return `${PUBLIC_URL_BASE}/documents/historydocuments/${filename}`;
 };
 
 async function sendAssignmentNotification(OrderID, StatusID) {
@@ -316,26 +351,230 @@ async function sendAssignmentNotification(OrderID, StatusID) {
     }
 }
 
+// exports.createOrUpdateOrderHistory = async (req, res) => {
+//     upload(req, res, async function (err) {
+//         if (err instanceof multer.MulterError) {
+//             return res.status(500).json({ error: err });
+//         } else if (err) {
+//             return res.status(500).json({ error: 'Failed to upload files or other errors occurred.' });
+//         }
+
+//         let { 
+//             OrderHistoryID, 
+//             OrderID, 
+//             StatusID, 
+//             StartDate, 
+//             EndDate, 
+//             AssignTo, 
+//             Comments, 
+//             TenantID, 
+//             UserID,  
+//             UserRoleID,
+//             CreatedBy 
+//         } = req.body;
+
+//         // Ensure numeric fields are treated as integers
+//         OrderHistoryID = parseInt(OrderHistoryID, 10);
+//         OrderID = parseInt(OrderID, 10);
+//         StatusID = parseInt(StatusID, 10);
+
+//         if (AssignTo === '') {
+//             AssignTo = null;
+//         } else {
+//             AssignTo = parseInt(AssignTo, 10);  // Convert to integer if it's not empty
+//         }
+        
+//         try {
+//             // Check if order exists
+//             const orderExists = await OrderTabelModel.findByPk(OrderID);
+//             if (!orderExists) {
+//                 return res.status(400).json({ error: 'Order does not exist.' });
+//             }
+
+//             // Check if status is valid
+//             const orderStatus = await OrderStatusModel.findByPk(StatusID);
+//             if (!orderStatus) {
+//                 return res.status(400).json({ error: 'Invalid StatusId.' });
+//             }
+
+//             const { OrderStatus } = orderStatus;
+
+//             let DocumentName = [];
+//             let OriginalFileNames = [];
+            
+//             if (req.files && req.files['UploadDocument']) {
+//                 for (let file of req.files['UploadDocument']) {
+//                     const { publicUrl, downloadUrl, originalFileName } = await uploadFileToSupabase(file);
+//                     DocumentName.push(publicUrl); // Add public URL
+//                     OriginalFileNames.push(originalFileName); // Store the original file name
+//                 }
+//             }
+            
+//             // Save both Document URLs and original file names in the database
+//             const DocumentNameString = DocumentName.length ? DocumentName.join(', ') : null;
+//             const OriginalFileNamesString = OriginalFileNames.length ? OriginalFileNames.join(', ') : null;
+            
+// // Handle subStatusId logic only for creation, not update
+// let subStatusId = orderExists.SubStatusId || 0;
+// if (!OrderHistoryID || OrderHistoryID == 0) {
+//     if (StatusID === 4) {
+//         // Increment subStatusId for StatusID 4
+//         if (orderExists.SubStatusId === 0) {
+//             subStatusId = 1;
+//         } else if (orderExists.SubStatusId < 4) {
+//             subStatusId = orderExists.SubStatusId + 1;
+//         } else {
+//             return res.status(200).json({ error: 'You have already crossed 4 revisions. Admin approval needed.' });
+//         }
+//     }
+
+//      // Increment subStatusId when OrderStatus reaches 11
+//      if (StatusID === 11) {
+//         // Check if there's any previous record with StatusID 11
+//         const lastStatus11Record = await OrderHistory.findOne({
+//             where: { OrderID, StatusID: 11 },
+//             order: [['CreatedAt', 'DESC']],
+//         });
+
+//         if (!lastStatus11Record) {
+//             // First time StatusID 11 is received
+//             subStatusId = 1;
+//         } else {
+//             // Increment the previous SubStatusId
+//             subStatusId = lastStatus11Record.SubStatusId + 1;
+//         }
+//     }
+
+  
+    
+//     // Set SubStatusId to 1 if StatusID is 8
+//     if (StatusID === 8) {
+//         subStatusId = 1;
+//     }
+
+//     // Handle subStatus assignment for StatusID 6, using SubStatusId of last StatusID 4 record
+//     if (StatusID === 6) {
+//         const lastStatus4Record = await OrderHistory.findOne({
+//             where: { OrderID, StatusID: 4 },
+//             order: [['CreatedAt', 'DESC']],
+//         });
+//         if (lastStatus4Record) {
+//             subStatusId = lastStatus4Record.SubStatusId;
+//         }
+//     }
+// }
+
+//             let newOrUpdatedOrderHistory;
+//             if (!OrderHistoryID || OrderHistoryID == 0) {
+//                 // Create new order history
+//                 newOrUpdatedOrderHistory = await OrderHistory.create({
+//                     OrderID,
+//                     StatusID,
+//                     StartDate,
+//                     EndDate,
+//                     AssignTo,
+//                     Comments,
+//                     DocumentName: DocumentNameString,  // Save the document URLs
+//                     OriginalFileNames:OriginalFileNamesString,
+//                     TenantID,
+//                     UserID,
+//                     UserRoleID,
+//                     OrderHistoryStatus: OrderStatus,
+//                     SubStatusId: subStatusId,
+//                     CreatedBy: CreatedBy || 'System',
+//                     CreatedAt: new Date(),
+//                     UpdatedAt: new Date(),
+//                 });
+//             } else {
+//                 // Update existing order history (don't increment SubStatusId)
+//                 newOrUpdatedOrderHistory = await OrderHistory.findOne({
+//                     where: { OrderID, OrderHistoryID }
+//                 });
+
+//                 if (!newOrUpdatedOrderHistory) {
+//                     return res.status(404).json({ error: 'Order history not found for the provided OrderID and OrderHistoryID.' });
+//                 }
+
+//                 await newOrUpdatedOrderHistory.update({
+//                     OrderID,
+//                     StatusID,
+//                     StartDate,
+//                     EndDate,
+//                     AssignTo,
+//                     Comments,
+//                     UserRoleID,
+//                     DocumentName: DocumentNameString || newOrUpdatedOrderHistory.DocumentName,  // Save updated URLs or retain previous ones
+//                     OriginalFileNames:OriginalFileNamesString || newOrUpdatedOrderHistory.OriginalFileName,
+//                     TenantID,
+//                     OrderHistoryStatus: OrderStatus,
+//                     UserID,
+//                     UpdatedAt: new Date(),
+//                 });
+//             }
+
+//                 // After successful order history creation/update, send notification
+//                 if (AssignTo) {  // Only send notification if there's an assigned user
+//                 await sendAssignmentNotification(OrderID, StatusID);
+//             }
+//             // Update order table with new status and sub-status
+//             await OrderTabelModel.update({ 
+//                 OrderStatus, 
+//                 StatusID, 
+//                 StatusDeliveryDate: EndDate, 
+//                 SubStatusId: subStatusId 
+//             }, { where: { OrderID } });
+
+//             // Trigger email logic for certain statuses
+//             if (StatusID === 6 || StatusID === 12) {
+//                 console.log(`Triggering email for StatusID ${StatusID}`); 
+//                 if (StatusID === 6) {
+//                     await triggerStatusEmail(OrderID);
+//                 // } else if (StatusID === 7) {
+//                 //     await triggerPaymentEmail(OrderID);
+//                 } else if (StatusID === 12) {
+//                     await triggerFeedbackEmail(OrderID);  
+//                 }
+//             }
+
+//             return res.status(OrderHistoryID ? 200 : 201).json({
+//                 StatusCode: 'SUCCESS',
+//                 // message: `Order history ${OrderHistoryID ? 'updated' : 'created'} successfully with new order status and sub-status.`,
+//                 message:`Order Status ${OrderHistoryID ? 'updated' : 'created'} successfully.`,
+//                 data: newOrUpdatedOrderHistory,
+//             });
+//         } catch (error) {
+//             console.error('Error creating or updating order history:', error);
+//             res.status(500).json({ error: 'An error occurred while processing the order history.' });
+//         }
+//     });
+// };
+
 exports.createOrUpdateOrderHistory = async (req, res) => {
     upload(req, res, async function (err) {
         if (err instanceof multer.MulterError) {
-            return res.status(500).json({ error: err });
+            return res.status(400).json({
+                error: 'File upload error',
+                details: err.message
+            });
         } else if (err) {
-            return res.status(500).json({ error: 'Failed to upload files or other errors occurred.' });
+            return res.status(500).json({
+                error: 'Server error during file upload',
+                details: err.message
+            });
         }
 
-        let { 
-            OrderHistoryID, 
-            OrderID, 
-            StatusID, 
-            StartDate, 
-            EndDate, 
-            AssignTo, 
-            Comments, 
-            TenantID, 
-            UserID,  
+        let {
+            OrderHistoryID,
+            OrderID,
+            StatusID,
+            StartDate,
+            EndDate,
+            AssignTo,
+            Comments,
+            TenantID,
+            UserID,
             UserRoleID,
-            CreatedBy 
+            CreatedBy
         } = req.body;
 
         // Ensure numeric fields are treated as integers
@@ -346,9 +585,9 @@ exports.createOrUpdateOrderHistory = async (req, res) => {
         if (AssignTo === '') {
             AssignTo = null;
         } else {
-            AssignTo = parseInt(AssignTo, 10);  // Convert to integer if it's not empty
+            AssignTo = parseInt(AssignTo, 10);
         }
-        
+
         try {
             // Check if order exists
             const orderExists = await OrderTabelModel.findByPk(OrderID);
@@ -364,70 +603,62 @@ exports.createOrUpdateOrderHistory = async (req, res) => {
 
             const { OrderStatus } = orderStatus;
 
-            let DocumentName = [];
+            // Handle document uploads
+            let DocumentUrls = [];
             let OriginalFileNames = [];
-            
+
             if (req.files && req.files['UploadDocument']) {
                 for (let file of req.files['UploadDocument']) {
-                    const { publicUrl, downloadUrl, originalFileName } = await uploadFileToSupabase(file);
-                    DocumentName.push(publicUrl); // Add public URL
-                    OriginalFileNames.push(originalFileName); // Store the original file name
+                    const documentUrl = getDocumentUrl(file.filename);
+                    DocumentUrls.push(documentUrl);
+                    OriginalFileNames.push(file.originalname);
                 }
             }
-            
-            // Save both Document URLs and original file names in the database
-            const DocumentNameString = DocumentName.length ? DocumentName.join(', ') : null;
+
+            // Convert arrays to strings for storage
+            const DocumentNameString = DocumentUrls.length ? DocumentUrls.join(', ') : null;
             const OriginalFileNamesString = OriginalFileNames.length ? OriginalFileNames.join(', ') : null;
-            
-// Handle subStatusId logic only for creation, not update
-let subStatusId = orderExists.SubStatusId || 0;
-if (!OrderHistoryID || OrderHistoryID == 0) {
-    if (StatusID === 4) {
-        // Increment subStatusId for StatusID 4
-        if (orderExists.SubStatusId === 0) {
-            subStatusId = 1;
-        } else if (orderExists.SubStatusId < 4) {
-            subStatusId = orderExists.SubStatusId + 1;
-        } else {
-            return res.status(200).json({ error: 'You have already crossed 4 revisions. Admin approval needed.' });
-        }
-    }
 
-     // Increment subStatusId when OrderStatus reaches 11
-     if (StatusID === 11) {
-        // Check if there's any previous record with StatusID 11
-        const lastStatus11Record = await OrderHistory.findOne({
-            where: { OrderID, StatusID: 11 },
-            order: [['CreatedAt', 'DESC']],
-        });
+            // Handle subStatusId logic
+            let subStatusId = orderExists.SubStatusId || 0;
+            if (!OrderHistoryID || OrderHistoryID == 0) {
+                if (StatusID === 4) {
+                    if (orderExists.SubStatusId === 0) {
+                        subStatusId = 1;
+                    } else if (orderExists.SubStatusId < 4) {
+                        subStatusId = orderExists.SubStatusId + 1;
+                    } else {
+                        return res.status(200).json({ error: 'You have already crossed 4 revisions. Admin approval needed.' });
+                    }
+                }
 
-        if (!lastStatus11Record) {
-            // First time StatusID 11 is received
-            subStatusId = 1;
-        } else {
-            // Increment the previous SubStatusId
-            subStatusId = lastStatus11Record.SubStatusId + 1;
-        }
-    }
+                if (StatusID === 11) {
+                    const lastStatus11Record = await OrderHistory.findOne({
+                        where: { OrderID, StatusID: 11 },
+                        order: [['CreatedAt', 'DESC']],
+                    });
 
-  
-    
-    // Set SubStatusId to 1 if StatusID is 8
-    if (StatusID === 8) {
-        subStatusId = 1;
-    }
+                    if (!lastStatus11Record) {
+                        subStatusId = 1;
+                    } else {
+                        subStatusId = lastStatus11Record.SubStatusId + 1;
+                    }
+                }
 
-    // Handle subStatus assignment for StatusID 6, using SubStatusId of last StatusID 4 record
-    if (StatusID === 6) {
-        const lastStatus4Record = await OrderHistory.findOne({
-            where: { OrderID, StatusID: 4 },
-            order: [['CreatedAt', 'DESC']],
-        });
-        if (lastStatus4Record) {
-            subStatusId = lastStatus4Record.SubStatusId;
-        }
-    }
-}
+                if (StatusID === 8) {
+                    subStatusId = 1;
+                }
+
+                if (StatusID === 6) {
+                    const lastStatus4Record = await OrderHistory.findOne({
+                        where: { OrderID, StatusID: 4 },
+                        order: [['CreatedAt', 'DESC']],
+                    });
+                    if (lastStatus4Record) {
+                        subStatusId = lastStatus4Record.SubStatusId;
+                    }
+                }
+            }
 
             let newOrUpdatedOrderHistory;
             if (!OrderHistoryID || OrderHistoryID == 0) {
@@ -439,8 +670,8 @@ if (!OrderHistoryID || OrderHistoryID == 0) {
                     EndDate,
                     AssignTo,
                     Comments,
-                    DocumentName: DocumentNameString,  // Save the document URLs
-                    OriginalFileNames:OriginalFileNamesString,
+                    DocumentName: DocumentNameString,
+                    OriginalFileNames: OriginalFileNamesString,
                     TenantID,
                     UserID,
                     UserRoleID,
@@ -451,7 +682,7 @@ if (!OrderHistoryID || OrderHistoryID == 0) {
                     UpdatedAt: new Date(),
                 });
             } else {
-                // Update existing order history (don't increment SubStatusId)
+                // Update existing order history
                 newOrUpdatedOrderHistory = await OrderHistory.findOne({
                     where: { OrderID, OrderHistoryID }
                 });
@@ -468,8 +699,8 @@ if (!OrderHistoryID || OrderHistoryID == 0) {
                     AssignTo,
                     Comments,
                     UserRoleID,
-                    DocumentName: DocumentNameString || newOrUpdatedOrderHistory.DocumentName,  // Save updated URLs or retain previous ones
-                    OriginalFileNames:OriginalFileNamesString || newOrUpdatedOrderHistory.OriginalFileName,
+                    DocumentName: DocumentNameString || newOrUpdatedOrderHistory.DocumentName,
+                    OriginalFileNames: OriginalFileNamesString || newOrUpdatedOrderHistory.OriginalFileNames,
                     TenantID,
                     OrderHistoryStatus: OrderStatus,
                     UserID,
@@ -477,43 +708,43 @@ if (!OrderHistoryID || OrderHistoryID == 0) {
                 });
             }
 
-                // After successful order history creation/update, send notification
-                if (AssignTo) {  // Only send notification if there's an assigned user
+            // Handle notifications and status updates
+            if (AssignTo) {
                 await sendAssignmentNotification(OrderID, StatusID);
             }
-            // Update order table with new status and sub-status
-            await OrderTabelModel.update({ 
-                OrderStatus, 
-                StatusID, 
-                StatusDeliveryDate: EndDate, 
-                SubStatusId: subStatusId 
+
+            await OrderTabelModel.update({
+                OrderStatus,
+                StatusID,
+                StatusDeliveryDate: EndDate,
+                SubStatusId: subStatusId
             }, { where: { OrderID } });
 
-            // Trigger email logic for certain statuses
+            // Trigger email logic
             if (StatusID === 6 || StatusID === 12) {
-                console.log(`Triggering email for StatusID ${StatusID}`); 
+                console.log(`Triggering email for StatusID ${StatusID}`);
                 if (StatusID === 6) {
                     await triggerStatusEmail(OrderID);
-                // } else if (StatusID === 7) {
-                //     await triggerPaymentEmail(OrderID);
                 } else if (StatusID === 12) {
-                    await triggerFeedbackEmail(OrderID);  
+                    await triggerFeedbackEmail(OrderID);
                 }
             }
 
             return res.status(OrderHistoryID ? 200 : 201).json({
                 StatusCode: 'SUCCESS',
-                // message: `Order history ${OrderHistoryID ? 'updated' : 'created'} successfully with new order status and sub-status.`,
-                message:`Order Status ${OrderHistoryID ? 'updated' : 'created'} successfully.`,
+                message: `Order Status ${OrderHistoryID ? 'updated' : 'created'} successfully.`,
                 data: newOrUpdatedOrderHistory,
             });
+
         } catch (error) {
             console.error('Error creating or updating order history:', error);
-            res.status(500).json({ error: 'An error occurred while processing the order history.' });
+            res.status(500).json({
+                error: 'An error occurred while processing the order history.',
+                details: error.message
+            });
         }
     });
 };
-
 
 
 

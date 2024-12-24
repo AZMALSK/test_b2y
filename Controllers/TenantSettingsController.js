@@ -98,95 +98,14 @@ const fs = require('fs').promises;
 //     });
 // };
 
-exports.updateTenantSettings = async (req, res) => {
-    upload(req, res, async function (err) {
-        if (err instanceof multer.MulterError) {
-            return res.status(500).json({ error: err });
-        } else if (err) {
-            return res.status(500).json({ error: 'Failed to upload files.' });
-        }
 
-        try {
-            const { TenantID } = req.params;
-            let { CompanyName, UpdatedBy } = req.body;
-
-            // Find existing tenant settings
-            const existingSettings = await TenantSettingsModel.findByPk(TenantID);
-            if (!existingSettings) {
-                return res.status(404).json({ 
-                    error: 'Tenant settings not found.' 
-                });
-            }
-
-            // Upload new CompanyLogo if provided
-            let logoUrl = existingSettings.CompanyLogo;
-            if (req.files && req.files['CompanyLogo']) {
-                const logoFile = req.files['CompanyLogo'][0];
-                const logoUpload = await uploadFileToSupabase(logoFile, 'logos');
-                logoUrl = logoUpload.publicUrl;
-            }
-
-            // Upload new CompanyImage if provided
-            let imageUrl = existingSettings.CompanyImage;
-            if (req.files && req.files['CompanyImage']) {
-                const imageFile = req.files['CompanyImage'][0];
-                const imageUpload = await uploadFileToSupabase(imageFile, 'images');
-                imageUrl = imageUpload.publicUrl;
-            }
-
-            // Update tenant settings
-            await existingSettings.update({
-                CompanyName: CompanyName || existingSettings.CompanyName,
-                CompanyLogo: logoUrl,
-                CompanyImage: imageUrl,
-                UpdatedBy: UpdatedBy || 'System',
-                UpdatedAt: new Date()
-            });
-
-            return res.status(200).json({
-                StatusCode: 'SUCCESS',
-                message: 'Tenant settings updated successfully.',
-                data: existingSettings
-            });
-
-        } catch (error) {
-            console.error('Error updating tenant settings:', error);
-            return res.status(500).json({ 
-                error: 'An error occurred while updating tenant settings.' 
-            });
-        }
-    });
-};
-
-
-
-    // Get tenant settings by TenantID
-    exports.getTenantSettings= async (req, res) => {
-        try {
-            const { TenantID } = req.params;
-
-            if (!TenantID) {
-                return res.status(400).json({ message: 'TenantID is required' });
-            }
-
-            const tenantSettings = await TenantSettingsModel.findByPk(TenantID);
-
-            if (!tenantSettings) {
-                return res.status(404).json({ message: 'Tenant not found' });
-            }
-
-            res.status(200).json({ tenantSettings });
-        } catch (error) {
-            console.error('Error in getTenantSettings:', error);
-            res.status(500).json({ message: 'Internal server error', error: error.message });
-        }
-    };
 
 
 
 
 
 // Configure base upload directory on your VPS
+
 const UPLOAD_BASE_DIR = '/imlystudios/uploads'; // Adjust this path according to your VPS setup
 const PUBLIC_URL_BASE = 'http://156.67.111.32:3000/uploads'; // Replace with your domain
 
@@ -258,9 +177,6 @@ exports.createTenantSettings = async (req, res) => {
 
         try {
             const { TenantID, CompanyName, CreatedBy } = req.body;
-
-            console.log('Uploaded files:', req.files);
-            console.log('Request body:', req.body);
             // Handle CompanyLogo upload
             let logoUrl = null;
             if (req.files && req.files['CompanyLogo']) {
@@ -296,6 +212,156 @@ exports.createTenantSettings = async (req, res) => {
             console.error('Error creating tenant settings:', error);
             return res.status(500).json({
                 error: 'An error occurred while creating tenant settings.',
+                details: error.message
+            });
+        }
+    });
+};
+
+// exports.updateTenantSettings = async (req, res) => {
+//     upload(req, res, async function (err) {
+//         if (err instanceof multer.MulterError) {
+//             return res.status(500).json({ error: err });
+//         } else if (err) {
+//             return res.status(500).json({ error: 'Failed to upload files.' });
+//         }
+
+//         try {
+//             const { TenantID } = req.params;
+//             let { CompanyName, UpdatedBy } = req.body;
+
+//             // Find existing tenant settings
+//             const existingSettings = await TenantSettingsModel.findByPk(TenantID);
+//             if (!existingSettings) {
+//                 return res.status(404).json({ 
+//                     error: 'Tenant settings not found.' 
+//                 });
+//             }
+
+//             // Upload new CompanyLogo if provided
+//             let logoUrl = existingSettings.CompanyLogo;
+//             if (req.files && req.files['CompanyLogo']) {
+//                 const logoFile = req.files['CompanyLogo'][0];
+//                 const logoUpload = await uploadFileToSupabase(logoFile, 'logos');
+//                 logoUrl = logoUpload.publicUrl;
+//             }
+
+//             // Upload new CompanyImage if provided
+//             let imageUrl = existingSettings.CompanyImage;
+//             if (req.files && req.files['CompanyImage']) {
+//                 const imageFile = req.files['CompanyImage'][0];
+//                 const imageUpload = await uploadFileToSupabase(imageFile, 'images');
+//                 imageUrl = imageUpload.publicUrl;
+//             }
+
+//             // Update tenant settings
+//             await existingSettings.update({
+//                 CompanyName: CompanyName || existingSettings.CompanyName,
+//                 CompanyLogo: logoUrl,
+//                 CompanyImage: imageUrl,
+//                 UpdatedBy: UpdatedBy || 'System',
+//                 UpdatedAt: new Date()
+//             });
+
+//             return res.status(200).json({
+//                 StatusCode: 'SUCCESS',
+//                 message: 'Tenant settings updated successfully.',
+//                 data: existingSettings
+//             });
+
+//         } catch (error) {
+//             console.error('Error updating tenant settings:', error);
+//             return res.status(500).json({ 
+//                 error: 'An error occurred while updating tenant settings.' 
+//             });
+//         }
+//     });
+// };
+
+
+
+    // Get tenant settings by TenantID
+
+    exports.getTenantSettings= async (req, res) => {
+        try {
+            const { TenantID } = req.params;
+
+            if (!TenantID) {
+                return res.status(400).json({ message: 'TenantID is required' });
+            }
+
+            const tenantSettings = await TenantSettingsModel.findByPk(TenantID);
+
+            if (!tenantSettings) {
+                return res.status(404).json({ message: 'Tenant not found' });
+            }
+
+            res.status(200).json({ tenantSettings });
+        } catch (error) {
+            console.error('Error in getTenantSettings:', error);
+            res.status(500).json({ message: 'Internal server error', error: error.message });
+        }
+};
+
+exports.updateTenantSettings = async (req, res) => {
+    upload(req, res, async function (err) {
+        if (err instanceof multer.MulterError) {
+            return res.status(400).json({ 
+                error: 'File upload error',
+                details: err.message 
+            });
+        } else if (err) {
+            return res.status(500).json({ 
+                error: 'Server error during file upload',
+                details: err.message 
+            });
+        }
+
+        try {
+            const { TenantID } = req.params;
+            let { CompanyName, UpdatedBy } = req.body;
+
+            // Find existing tenant settings
+            const existingSettings = await TenantSettingsModel.findByPk(TenantID);
+            if (!existingSettings) {
+                return res.status(404).json({ 
+                    error: 'Tenant settings not found.' 
+                });
+            }
+
+            // Handle CompanyLogo upload
+            let logoUrl = existingSettings.CompanyLogo;
+            if (req.files && req.files['CompanyLogo']) {
+                const logoFile = req.files['CompanyLogo'][0];
+                logoUrl = getPublicUrl('documents/logos', logoFile.filename);
+            }
+
+            // Handle CompanyImage upload
+            let imageUrl = existingSettings.CompanyImage;
+            if (req.files && req.files['CompanyImage']) {
+                const imageFile = req.files['CompanyImage'][0];
+                imageUrl = getPublicUrl('documents/images', imageFile.filename);
+            }
+
+            // Update tenant settings
+            const updatedSettings = await existingSettings.update({
+                CompanyName: CompanyName || existingSettings.CompanyName,
+                CompanyLogo: logoUrl,
+                CompanyImage: imageUrl,
+                UpdatedBy: UpdatedBy || 'System',
+                UpdatedAt: new Date()
+            });
+
+            return res.status(200).json({
+                StatusCode: 'SUCCESS',
+                message: 'Tenant settings updated successfully.',
+                data: updatedSettings
+            });
+
+        } catch (error) {
+            console.error('Error updating tenant settings:', error);
+            return res.status(500).json({
+                error: 'An error occurred while updating tenant settings.',
                 details: error.message
             });
         }
